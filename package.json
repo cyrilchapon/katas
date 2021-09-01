@@ -4,11 +4,17 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "start": "ts-node src/index"
+    "start": "ts-node src/index",
+    "test": "mocha"
   },
   "dependencies": {
     "@types/node": "^16.7.10",
     "ts-node": "^10.2.1",
     "typescript": "^4.4.2"
+  },
+  "devDependencies": {
+    "@types/mocha": "^9.0.0",
+    "earljs": "^0.1.10",
+    "mocha": "^9.1.1"
   }
 }
