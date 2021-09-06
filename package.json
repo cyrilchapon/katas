@@ -5,7 +5,10 @@
   "license": "MIT",
   "scripts": {
     "start": "ts-node src/index",
-    "test": "mocha"
+    "test": "mocha 'test/**/*.test.ts'",
+    "test:potter": "mocha 'test/potter/**/*.test.ts'",
+    "test:2": "mocha 'test/2-add-two-numbers/**/*.test.ts'",
+    "test:4": "mocha 'test/4-median-2-sorted-arrays/**/*.test.ts'"
   },
   "dependencies": {
     "@types/node": "^16.7.10",
