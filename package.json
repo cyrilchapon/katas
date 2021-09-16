@@ -10,6 +10,7 @@
     "test:2": "mocha 'test/2-add-two-numbers/**/*.test.ts'",
     "test:3": "mocha 'test/3-longest-substring-without-repeating-characters/**/*.test.ts'",
     "test:4": "mocha 'test/4-median-2-sorted-arrays/**/*.test.ts'",
+    "test:11": "mocha 'test/11-max-area/**/*.test.ts'",
     "test:12": "mocha 'test/12-integer-to-roman/**/*.test.ts'",
     "test:13": "mocha 'test/13-roman-to-integer/**/*.test.ts'",
     "test:17": "mocha 'test/17-phone-number-letter-combinations/**/*.test.ts'"

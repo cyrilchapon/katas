@@ -44,25 +44,6 @@ function maxArea(heights: number[]): number {
   return greatestArea
 }
 
-function maxAreaBack(heights: number[]): number {
-  const getArea = _getArea(heights)
-  let greatestArea: number = 0
-
-  // Loop on every heights
-  heights.forEach((h1, i1) => {
-    // Subloop on remainings
-    heights.slice(i1 + 1).forEach((h2, i2bis) => {
-      const i2 = i2bis + i1 + 1
-
-      const currentArea = getArea(i1, i2)
-
-      greatestArea = Math.max(currentArea, greatestArea)
-    })
-  })
-
-  return greatestArea
-}
-
 export {
   maxArea
 }
