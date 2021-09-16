@@ -14,6 +14,7 @@ function maxArea(heights: number[]): number {
   let greatestArea: number = 0
 
   // Loop on every heights
+  // (from start)
   let h1prev = 0
   for (let i1 = 0; i1 < heights.length; i1++) {
     const h1 = heights[i1]
@@ -25,6 +26,7 @@ function maxArea(heights: number[]): number {
     }
 
     // Subloop on remainings
+    // (from end)
     let h2prev = 0
     for (let i2 = heights.length - 1; i2 > i1; i2--) {
       const h2 = heights[i2]
