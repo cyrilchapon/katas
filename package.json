@@ -13,7 +13,9 @@
     "test:11": "mocha 'test/11-max-area/**/*.test.ts'",
     "test:12": "mocha 'test/12-integer-to-roman/**/*.test.ts'",
     "test:13": "mocha 'test/13-roman-to-integer/**/*.test.ts'",
-    "test:17": "mocha 'test/17-phone-number-letter-combinations/**/*.test.ts'"
+    "test:17": "mocha 'test/17-phone-number-letter-combinations/**/*.test.ts'",
+    "test:48": "mocha 'test/48-rotate-image/**/*.test.ts'",
+    "test:50": "mocha 'test/50-pow/**/*.test.ts'"
   },
   "dependencies": {
     "@types/node": "^16.7.10",
