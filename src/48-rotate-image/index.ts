@@ -2,7 +2,16 @@
  Do not return anything, modify matrix in-place instead.
  */
 function rotate(matrix: number[][]): void {
+  const rotatedMatrix = rotateImage(matrix)
+  _copyMatrix(rotatedMatrix)(matrix)
+}
 
+const _copyMatrix = (srcMatrix: number[][]) => (dstMatrix: number[][]) => {
+  srcMatrix.forEach((row, rowIndex) => {
+    row.forEach((cell, cellIndex) => {
+      dstMatrix[rowIndex][cellIndex] = cell
+    })
+  })
 }
 
 const rotateImage = (matrix: number[][]): number[][] => {
