@@ -24,6 +24,7 @@
     "test:50": "mocha 'test/50-*/**/*.test.ts'",
     "test:54": "mocha 'test/54-*/**/*.test.ts'",
     "test:62": "mocha 'test/62-*/**/*.test.ts'",
+    "test:1812": "mocha 'test/1812-*/**/*.test.ts'",
     "test:2306": "mocha 'test/2306-*/**/*.test.ts'"
   },
   "dependencies": {
