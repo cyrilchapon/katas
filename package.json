@@ -23,7 +23,8 @@
     "test:48": "mocha 'test/48-*/**/*.test.ts'",
     "test:50": "mocha 'test/50-*/**/*.test.ts'",
     "test:54": "mocha 'test/54-*/**/*.test.ts'",
-    "test:62": "mocha 'test/62-*/**/*.test.ts'"
+    "test:62": "mocha 'test/62-*/**/*.test.ts'",
+    "test:2306": "mocha 'test/2306-*/**/*.test.ts'"
   },
   "dependencies": {
     "@types/node": "^16.7.10",
