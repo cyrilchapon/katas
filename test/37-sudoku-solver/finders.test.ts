@@ -3,12 +3,13 @@ import { expect } from 'earljs'
 import {
   Board,
   BoardCandidates,
-  findSingleHiddenCandidates
+  findHiddenSinglesCandidates,
+  findHiddenPairsCandidates
 } from '../../src/37-sudoku-solver'
 
 describe('SudokuSolver', () => {
   describe('Finders', () => {
-    describe('findSingleHiddenCandidates', () => {
+    describe('findHiddenSingleCandidates', () => {
       it('should return consistent', () => {
         const input = [
           [['1', '2'], ['1', '2'], [], [], [], [], [], [], []],
@@ -22,11 +23,8 @@ describe('SudokuSolver', () => {
           [[], ['1'], [], [], [], [], [], [], []]
         ]
 
-        let actual: BoardCandidates
-        let expected: BoardCandidates
-
-        actual = findSingleHiddenCandidates(input)
-        expected = [
+        const actual = findHiddenSinglesCandidates(input)
+        const expected = [
           [['1'], [], [], [], [], [], [], [], []],
           [[], [], [], [], [], [], [], [], []],
           [[], [], [], [], [], [], [], [], []],
@@ -39,6 +37,63 @@ describe('SudokuSolver', () => {
         ]
 
         expect(actual).toEqual(expected)
+      })
+    })
+
+    describe('findHiddenPairsCandidates', () => {
+      it('should return consistent', () => {
+        const input = [
+          [['1', '2', '3'], ['1', '2'], [], [], [], [], [], [], []],
+          [[], [], [], [], [], [], [], [], ['6', '8', '4']],
+          [[], [], [], [], [], [], [], [], []],
+          [[], [], [], ['3', '9', '7'], [], [], [], [], []],
+          [[], [], [], [], [], [], [], [], []],
+          [[], [], [], [], [], ['9', '7', '2'], [], [], []],
+          [[], [], [], [], [], [], [], [], []],
+          [[], [], [], [], [], [], [], [], ['2', '5', '6', '8']],
+          [[], [], [], [], [], [], [], [], []]
+        ]
+
+        const actual = findHiddenPairsCandidates(input)
+        const expected = {
+          row: [
+            [['1', '2'], ['1', '2'], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []]
+          ],
+          col: [
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], ['6', '8'], [], [], [], [], [], ['6', '8'], []]
+          ],
+          square: [
+            [['1', '2'], ['1', '2'], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [['9', '7'], [], [], [], [], [], [], [], ['9', '7']],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []]
+          ]
+        }
+
+        expect(actual.row).toEqual(expected.row)
+        expect(actual.col).toEqual(expected.col)
+        expect(actual.square).toEqual(expected.square)
       })
     })
   })

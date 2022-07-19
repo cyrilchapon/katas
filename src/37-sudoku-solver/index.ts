@@ -1,3 +1,5 @@
+import { AssertionError } from "assert"
+
 const dimensions = ['row', 'col', 'square'] as const
 type Dimension = typeof dimensions[number]
 
@@ -30,12 +32,11 @@ const _solveSudoku = (inputBoard: Board): Board => {
     currentCandidates = narrowCandidatesByFilled(EMPTY_VAL)(currentBoard, currentCandidates)
     currentCandidates = narrowResultantCandidatesByFilled(EMPTY_VAL)(currentBoard, currentCandidates)
 
-    const hiddenSingleCandidates: BoardCandidates = findSingleHiddenCandidates(currentCandidates)
-    currentCandidates = narrowSingleHiddenCandidates(EMPTY_VAL)(currentBoard, currentCandidates)(hiddenSingleCandidates)
+    const hiddenSinglesCandidates: BoardCandidates = findHiddenSinglesCandidates(currentCandidates)
+    currentCandidates = narrowHiddenSinglesCandidates(currentCandidates)(hiddenSinglesCandidates)
 
-    // Buggy
-    // const hiddenCoupleCandidates: Record<Dimension, BoardCandidates> = findHiddenCouplesCandidates(currentCandidates)
-    // currentCandidates = narrowHiddenCouplesToNaked(EMPTY_VAL)(currentBoard, currentCandidates)(hiddenCoupleCandidates)
+    const hiddenPairsCandidates: Record<Dimension, BoardCandidates> = findHiddenPairsCandidates(currentCandidates)
+    currentCandidates = narrowHiddenPairsToNaked(currentCandidates)(hiddenPairsCandidates)
 
     currentBoard = fillSingleCandidates(EMPTY_VAL)(currentBoard, currentCandidates)
 
@@ -46,8 +47,12 @@ const _solveSudoku = (inputBoard: Board): Board => {
 
     boardOver = isBoardOver(EMPTY_VAL)(currentBoard)
 
-    logFullBoard(currentBoard, currentCandidates)
+    if (!isBoardValid(EMPTY_VAL)(currentBoard)) {
+      throw new AssertionError({ message: 'Invalid board' })
+    }
   } while (somethingChanged || boardOver)
+
+  // logFullBoard(currentBoard, currentCandidates)
 
   return currentBoard
 }
@@ -88,28 +93,43 @@ const narrowResultantCandidatesByFilled = (emptyVal: string) => (board: Board, b
   boardCandidates.map(
     (boxCandidates, boxIndex) => boxCandidates.map(
       (cellCandidates, indexInBox) => {
+        // Find intersecting boxes
         const intersections = getIntersections(board)([boxIndex, indexInBox])
+
+        // Build a set where...
         const filledValues = [
           ...new Set(
-            Object.values(intersections).flatMap(([box]) => box.filter(cellValue => cellValue !== emptyVal))
+            // ... we accumulate, for each intersecting boxes...
+            Object.values(intersections).flatMap(
+              ([box, [intersectingBoxIndex, indexInIntersectingBox]]) => (
+                // each intersecting cell values where...
+                box.filter((cellValue, cellIndexInBox) => (
+                  // cell is not self
+                  cellIndexInBox != indexInIntersectingBox &&
+                  // and value is filled
+                  cellValue !== emptyVal)
+                )
+              )
+            )
           )
         ]
+
         return cellCandidates.filter(candidate => !filledValues.includes(candidate))
       }
     )
   )
 )
 
-const narrowSingleHiddenCandidates = (emptyVal: string) => (board: Board, boardCandidates: BoardCandidates) => (boardSingleHiddenCandidates: BoardCandidates) => (
+const narrowHiddenSinglesCandidates = (boardCandidates: BoardCandidates) => (boardHiddenSinglesCandidates: BoardCandidates) => (
   boardCandidates.map(
     (boxCandidates, boxIndex) => boxCandidates.map(
       (cellCandidates, indexInBox) => {
-        const cellSingleHiddenCandidates = boardSingleHiddenCandidates[boxIndex][indexInBox]
-        if (cellSingleHiddenCandidates.length > 1) {
+        const cellHiddenSinglesCandidates = boardHiddenSinglesCandidates[boxIndex][indexInBox]
+        if (cellHiddenSinglesCandidates.length > 1) {
           throw new Error(`Multiple hidden candidates found in cell ${boxIndex},${indexInBox}`)
         }
-        if (cellSingleHiddenCandidates.length === 1) {
-          return cellSingleHiddenCandidates
+        if (cellHiddenSinglesCandidates.length === 1) {
+          return cellHiddenSinglesCandidates
         }
         return cellCandidates
       }
@@ -117,13 +137,20 @@ const narrowSingleHiddenCandidates = (emptyVal: string) => (board: Board, boardC
   )
 )
 
-const narrowHiddenCouplesToNaked = (emptyVal: string) => (board: Board, boardCandidates: BoardCandidates) => (boardHiddenCoupleCandidates: Record<Dimension, BoardCandidates>) => (
+const narrowHiddenPairsToNaked = (boardCandidates: BoardCandidates) => (boardHiddenPairsCandidates: Record<Dimension, BoardCandidates>) => (
   dimensions.reduce<BoardCandidates>((acc, dimension) => {
-    const dimensionHiddenCoupleCandidates = boardHiddenCoupleCandidates[dimension]
+    const dimensionHiddenPairsCandidates = boardHiddenPairsCandidates[dimension]
     return acc.map((boxCandidates, boxIndex) => boxCandidates.map((cellCandidates, indexInBox) => {
-      const cellHiddenCoupleCandidates = getCellCandidates(dimensionHiddenCoupleCandidates, dimension)('row', [boxIndex, indexInBox])
-      return cellHiddenCoupleCandidates.length > 0
-        ? cellCandidates.filter(cellCandidate => cellHiddenCoupleCandidates.includes(cellCandidate))
+      const cellHiddenPairsCandidates = getCellCandidates(dimensionHiddenPairsCandidates, dimension)('row', [boxIndex, indexInBox])
+      // TODO: check here
+      if (cellHiddenPairsCandidates.length > 0) {
+        // console.log(`Keeping only ${cellHiddenPairsCandidates} of ${cellCandidates} on ${[boxIndex, indexInBox]}`)
+        if (boxIndex === 6 && indexInBox === 6 && dimension === 'square') {
+          logFullCandidates(dimensionHiddenPairsCandidates)
+        }
+      }
+      return cellHiddenPairsCandidates.length > 0
+        ? cellCandidates.filter(cellCandidate => cellHiddenPairsCandidates.includes(cellCandidate))
         : cellCandidates
     }))
   }, boardCandidates)
@@ -131,7 +158,7 @@ const narrowHiddenCouplesToNaked = (emptyVal: string) => (board: Board, boardCan
 
 
 // Finders
-const findSingleHiddenCandidates = (boardCandidates: BoardCandidates) => (
+const findHiddenSinglesCandidates = (boardCandidates: BoardCandidates) => (
   // For each box...
   boardCandidates.map(
     // And each cell
@@ -141,7 +168,7 @@ const findSingleHiddenCandidates = (boardCandidates: BoardCandidates) => (
         const intersections = getCandidatesIntersections(boardCandidates)([boxIndex, indexInBox])
 
         // And keep only cell candidates...
-        const singleHiddenCellCandidates = cellCandidates.filter(cellCandidate => (
+        const hiddenSinglesCellCandidates = cellCandidates.filter(cellCandidate => (
           // That for at least 1 intersecting box,
           Object.entries(intersections).some(([dimension, [intersectingBoxCandidates, [intersectingBoxIndex, indexInIntersectingBox]]]) => (
             // Has every of its cell
@@ -156,61 +183,52 @@ const findSingleHiddenCandidates = (boardCandidates: BoardCandidates) => (
           ))
         ))
 
-        return singleHiddenCellCandidates
+        return hiddenSinglesCellCandidates
       }
     )
   )
 )
 
-const findHiddenCouplesCandidates = (boardCandidates: BoardCandidates) => (
+const findHiddenPairsCandidates = (boardCandidates: BoardCandidates) => (
   Object.fromEntries(dimensions.map(dimension => [dimension, (new Array(9).fill(null).map((v, boxIndex) => {
     const boxCandidates = getCandidates(boardCandidates)(dimension, boxIndex)
 
-    return boxCandidates.map((cellCandidates, indexInBox) => {
-      // const restSetCellsCandidates = [...setCandidates.slice(0, indexInSet), ...setCandidates.slice(indexInSet + 1)]
-    
-    
-      // Get other cells of the BoardSet
-      // where a given candidate is allowed
-      const getCellsAllowingCandidate = (boxCandidates: BoxCandidates) => (candidate: string) => {
-        return boxCandidates.reduce<number []>((acc, cellCandidates, indexInBox) => {
-          if (cellCandidates.includes(candidate)) {
-            acc.push(indexInBox)
-          }
-    
-          return acc
-        }, [])
-      }
-    
-      const hiddenCouplesCandidates = cellCandidates.filter(cellCandidate => {
-        // Get other cells of the BoardSet where cellCandidate is allowed
-        const cellsAllowingCandidate = getCellsAllowingCandidate(boxCandidates)(cellCandidate)
-    
-        // Only continue if we have a couple
-        if (cellsAllowingCandidate.length !== 2) {
-          return false
+    const candidatesRef = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
+    const cellIndexesByCandidates = candidatesRef.reduce<Record<string, number[]>>((acc, candidate) => {
+      acc[candidate] = boxCandidates.reduce<number[]>((acc, otherCellCandidates, otherCellIndexInBox) => {
+        if (otherCellCandidates.includes(candidate)) {
+          acc.push(otherCellIndexInBox)
         }
+        return acc
+      }, [])
 
-        const otherCellIndexInBox = cellsAllowingCandidate[0]
-    
-        const otherCommonCandidatesOnlyAllowedInOtherCell = cellCandidates.filter((commonCellCandidate) => {
-          if (cellCandidate === commonCellCandidate) {
-            return false
-          }
-          const cellsAllowingOtherCandidate = getCellsAllowingCandidate(boxCandidates)(commonCellCandidate)
+      return acc
+    }, {})
+
+    return boxCandidates.map((cellCandidates, indexInBox) => {
+      // Loop on allowed candidates with cell indexes
+      const pairIntersections = Object.fromEntries(Object.entries(cellIndexesByCandidates)
+        // Keep only own allowed pairs
+        .filter(([candidate, allowedCellIndexes]) => (
+          allowedCellIndexes.length === 2 &&
+          allowedCellIndexes.includes(indexInBox)
+        ))
+        // Keep only ones for which we share another cell
+        .filter(([candidate, allowedCellIndexes], i, filteredEntries) => {
+          const candidateOtherAllowedCellIndex = allowedCellIndexes.find(i => i !== indexInBox)!
 
           return (
-            cellsAllowingOtherCandidate.length === 2 &&
-            cellsAllowingOtherCandidate.includes(otherCellIndexInBox)
+            filteredEntries.some(([otherCandidate, otherCandidateAllowedCellIndexes]) => (
+              otherCandidate !== candidate &&
+              otherCandidateAllowedCellIndexes.includes(candidateOtherAllowedCellIndex)
+            ))
           )
         })
-    
-        return otherCommonCandidatesOnlyAllowedInOtherCell.length === 1
-      })
-    
-      return hiddenCouplesCandidates.length === 2
-        ? hiddenCouplesCandidates
-        : []
+      )
+
+      return cellCandidates.filter(
+        cellCandidate => Object.keys(pairIntersections).includes(cellCandidate)
+      )
     })
   }))])) as Record<Dimension, BoardCandidates>
 )
@@ -246,6 +264,20 @@ const getBox = (
     return cellValue
   })
   return box
+}
+
+const getBoard = (
+  srcBoard: Board,
+  srcDimension: Dimension = 'row'
+) => (
+  dstDimension: Dimension
+): Board => {
+  const initialBoard = (new Array(9)).fill(null)
+  const board = initialBoard.map((v, dstBoxIndex) => {
+    const box = getBox(srcBoard, srcDimension)(dstDimension, dstBoxIndex)
+    return box
+  })
+  return board
 }
 
 const getCellCandidates = (
@@ -298,13 +330,7 @@ const getAbsoluteIndex = (dimension: Dimension) => ([boxIndex, indexInBox]: Cell
     case 'col':
       return [indexInBox, boxIndex]
     case 'square':
-      const [squareRowIndex, squareColIndex] = deflattenIndex(boxIndex)
-      const [cellRowSquareIndex, cellColSquareIndex] = deflattenIndex(indexInBox)
-
-      return [
-        (squareRowIndex * 3) + cellRowSquareIndex,
-        (squareColIndex * 3) + cellColSquareIndex
-      ]
+      return getAbsoluteIndexFromSquareRelativeIndex([boxIndex, indexInBox])
   }
 }
 
@@ -315,11 +341,15 @@ const getRelativeIndex = (dimension: Dimension) => ([rowIndex, colIndex]: CellIn
     case 'col':
       return [colIndex, rowIndex]
     case 'square':
-      return getFlatCellSquareIndex([rowIndex, colIndex])
+      return getSquareRelativeIndexFromAbsoluteIndex([rowIndex, colIndex])
   }
 }
 
-const getCellSquareIndex = ([boxIndex, indexInBox]: CellIndex): CellIndex => {
+/**
+ * Given a cell relative index (to its square), 
+ * returns its absolute index
+ */
+const getAbsoluteIndexFromSquareRelativeIndex = ([boxIndex, indexInBox]: CellIndex): CellIndex => {
   const [squareRowIndex, squareColIndex] = deflattenIndex(boxIndex)
   const [cellRowSquareIndex, cellColSquareIndex] = deflattenIndex(indexInBox)
 
@@ -329,10 +359,14 @@ const getCellSquareIndex = ([boxIndex, indexInBox]: CellIndex): CellIndex => {
   ]
 }
 
-const getFlatCellSquareIndex = (cellIndex: CellIndex): CellIndex => {
-  const squareIndex = getSquareIndex(cellIndex)
+/**
+ * Given a cell absolute index, 
+ * returns its relative index (to its square)
+ */
+const getSquareRelativeIndexFromAbsoluteIndex = (cellIndex: CellIndex): CellIndex => {
+  const squareIndex = getSquare2dIndex(cellIndex)
   const flatSquareIndex = flattenIndex(squareIndex)
-  const cellSquareIndex = getCellIndexInSquare(cellIndex, squareIndex)
+  const cellSquareIndex = getCell2dIndexInSquare(cellIndex, squareIndex)
   const flatCellSquareIndex = flattenIndex(cellSquareIndex)
 
   return [
@@ -341,7 +375,18 @@ const getFlatCellSquareIndex = (cellIndex: CellIndex): CellIndex => {
   ]
 }
 
-const getSquareIndex = ([rowIndex, colIndex]: CellIndex): CellIndex => {
+// Nota bene : A "2dIndex" is the bidimentional
+// position of a square in the grid,
+// or of a cell in a square, like so :
+//    0  1  2
+// 0 [ ][ ][ ]
+// 1 [ ][ ][ ]
+// 2 [ ][ ][ ]
+
+/**
+ * Gets the square 2dIndex of a given cell
+ */
+const getSquare2dIndex = ([rowIndex, colIndex]: CellIndex): CellIndex => {
   const squareIndex: CellIndex = [
     Math.floor(rowIndex / 3),
     Math.floor(colIndex / 3)
@@ -349,7 +394,10 @@ const getSquareIndex = ([rowIndex, colIndex]: CellIndex): CellIndex => {
   return squareIndex
 }
 
-const getCellIndexInSquare = ([rowIndex, colIndex]: CellIndex, squareIndex: CellIndex): CellIndex => {
+/**
+ * Gets the 2dIndex in square of a given cell 
+ */
+const getCell2dIndexInSquare = ([rowIndex, colIndex]: CellIndex, squareIndex: CellIndex): CellIndex => {
   const [
     squareRowIndex,
     squareColIndex
@@ -363,11 +411,19 @@ const getCellIndexInSquare = ([rowIndex, colIndex]: CellIndex, squareIndex: Cell
   return cellSquareIndex
 }
 
+/**
+ * Given a bidimensionnal index (2dIndex), flatten it
+ * to get its actual unidimensional index
+ */
 const flattenIndex = ([rowIndex, colIndex]: CellIndex): number => {
   const flatIndex = colIndex + (3 * rowIndex)
   return flatIndex
 }
 
+/**
+ * Given an unidimensional index, deflatten it
+ * to get its bidimensionnal index (2dIndex)
+ */
 const deflattenIndex = (flatIndex: number): CellIndex => {
   const flatRowIndex = Math.floor(flatIndex / 3)
   const flatColIndex = flatIndex - (3 * flatRowIndex)
@@ -437,7 +493,9 @@ const isBoxOver = (emptyVal: string) => (box: Box): boolean => {
 }
 
 const isBoardValid = (emptyVal: string) => (board: Board): boolean => (
-  board.every(isBoxValid(emptyVal))
+  dimensions.every(dimension => (
+    getBoard(board)(dimension).every(isBoxValid(emptyVal))
+  ))
 )
 
 const isBoxValid = (emptyVal: string) => (box: Box): boolean => {
@@ -685,5 +743,18 @@ export {
   _solveSudoku,
   getCellValue,
   getBox,
-  findSingleHiddenCandidates
+  findHiddenSinglesCandidates,
+  findHiddenPairsCandidates,
+  isBoardValid,
+  isBoardOver,
+  narrowCandidatesByFilled,
+  narrowResultantCandidatesByFilled,
+  narrowHiddenPairsToNaked,
+  narrowHiddenSinglesCandidates,
+  generateInitialBoardCandidates
+}
+
+export {
+  logFullBoard,
+  logFullCandidates
 }
