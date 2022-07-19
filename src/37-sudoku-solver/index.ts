@@ -41,6 +41,9 @@ const _solveSudoku = (inputBoard: Board): Board => {
     const hiddenTripletsCandidates: Record<Dimension, BoardCandidates> = findHiddenTripletsCandidates(currentCandidates)
     currentCandidates = narrowHiddenSetsToNaked(currentCandidates)(hiddenTripletsCandidates)
 
+    const hiddenQuadsCandidates: Record<Dimension, BoardCandidates> = findHiddenQuadsCandidates(currentCandidates)
+    currentCandidates = narrowHiddenSetsToNaked(currentCandidates)(hiddenQuadsCandidates)
+
     currentBoard = fillSingleCandidates(EMPTY_VAL)(currentBoard, currentCandidates)
 
     somethingChanged = (
@@ -235,39 +238,15 @@ const findHiddenTripletsCandidates = (boardCandidates: BoardCandidates) => (
     const boxCandidates = getCandidates(boardCandidates)(dimension, boxIndex)
 
     const candidatesRef = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
-    const cellIndexesByCandidates = candidatesRef.reduce<Record<string, number[]>>((acc, candidate) => {
-      acc[candidate] = boxCandidates.reduce<number[]>((acc, otherCellCandidates, otherCellIndexInBox) => {
-        if (otherCellCandidates.includes(candidate)) {
-          acc.push(otherCellIndexInBox)
-        }
-        return acc
-      }, [])
+    const cellIndexesByCandidates = candidatesRef.reduce<[string, number[]][]>((acc, candidate) => ([
+      ...acc,
+      [candidate, boxCandidates.reduce<number[]>((acc, otherCellCandidates, otherCellIndexInBox) => ([
+        ...acc,
+        ...(otherCellCandidates.includes(candidate) ? [otherCellIndexInBox] : [])
+      ]), [])]
+    ]), [] as [string, number[]][])
 
-      return acc
-    }, {})
-
-    const intersection = <T, U extends Array<T> = Array<T>>(a1: U, a2: U, ...rest: Array<U>): ReturnType<U['filter']> => {
-      const a12 = a1.filter(v1 => a2.includes(v1))
-      if (rest.length === 0) { return a12 as ReturnType<U['filter']> }
-      const [
-        next,
-        ...otherRest
-      ] = rest
-      return intersection<T, U>(a12 as U, next, ...otherRest)
-    }
-
-    const union = <T, U extends Array<T> = Array<T>>(a1: U, a2: U, ...rest: Array<U>): ReturnType<U['filter']> => {
-      const a12 = [...new Set([...a1, ...a2])]
-
-      if (rest.length === 0) { return a12 as ReturnType<U['filter']> }
-      const [
-        next,
-        ...otherRest
-      ] = rest
-      return union<T, U>(a12 as U, next, ...otherRest)
-    }
-
-    const intersectingCellIndexesEntriesByCandidates = Object.fromEntries(Object.entries(cellIndexesByCandidates)
+    const intersectingCellIndexesEntriesByCandidates = cellIndexesByCandidates
       .filter(([candidate, allowedCellIndexes], i, entries) => (
         entries.some(([candidate2, allowedCellIndexes2]) => (
           entries
@@ -282,18 +261,6 @@ const findHiddenTripletsCandidates = (boardCandidates: BoardCandidates) => (
                 allowedCellIndexes2,
                 allowedCellIndexes3
               )
-              const allowedCellsIntersection1 = intersection(
-                allowedCellIndexes,
-                allowedCellIndexes2
-              )
-              const allowedCellsIntersection2 = intersection(
-                allowedCellIndexes2,
-                allowedCellIndexes3
-              )
-              const allowedCellsIntersection3 = intersection(
-                allowedCellIndexes,
-                allowedCellIndexes3
-              )
 
               return (
                 allowedCellsUnion.length === 3 && // x ?
@@ -304,10 +271,9 @@ const findHiddenTripletsCandidates = (boardCandidates: BoardCandidates) => (
             })
         ))
       ))
-    )
 
     return boxCandidates.map((cellCandidates, indexInBox) => {
-      const hiddenTripletsCandidates = Object.entries(intersectingCellIndexesEntriesByCandidates)
+      const hiddenTripletsCandidates = intersectingCellIndexesEntriesByCandidates
         .filter(([candidate, allowedCellindexes]) => (
           allowedCellindexes.includes(indexInBox)
         ))
@@ -315,6 +281,66 @@ const findHiddenTripletsCandidates = (boardCandidates: BoardCandidates) => (
 
       return hiddenTripletsCandidates.length > 0
           ? cellCandidates.filter(cellCandidate => hiddenTripletsCandidates.includes(cellCandidate))
+          : []
+    })
+  }))])) as Record<Dimension, BoardCandidates>
+)
+
+const findHiddenQuadsCandidates = (boardCandidates: BoardCandidates) => (
+  Object.fromEntries(dimensions.map(dimension => [dimension, (new Array(9).fill(null).map((v, boxIndex) => {
+    const boxCandidates = getCandidates(boardCandidates)(dimension, boxIndex)
+
+    const candidatesRef = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
+    const cellIndexesByCandidates = candidatesRef.reduce<[string, number[]][]>((acc, candidate) => ([
+      ...acc,
+      [candidate, boxCandidates.reduce<number[]>((acc, otherCellCandidates, otherCellIndexInBox) => ([
+        ...acc,
+        ...(otherCellCandidates.includes(candidate) ? [otherCellIndexInBox] : [])
+      ]), [])]
+    ]), [] as [string, number[]][])
+
+    const intersectingCellIndexesEntriesByCandidates = cellIndexesByCandidates
+      .filter(([candidate, allowedCellIndexes], i, entries) => (
+        entries.some(([candidate2, allowedCellIndexes2]) => (
+          entries.some(([candidate3, allowedCellIndexes3]) => (
+            entries
+              .filter(([candidate4, allowedCellIndexes4]) => (
+                candidate !== candidate2 &&
+                candidate !== candidate3 &&
+                candidate !== candidate4 &&
+                candidate2 !== candidate3 &&
+                candidate2 !== candidate4 &&
+                candidate3 !== candidate4
+              ))
+              .some(([candidate4, allowedCellIndexes4]) => {
+                const allowedCellsUnion = union(
+                  allowedCellIndexes,
+                  allowedCellIndexes2,
+                  allowedCellIndexes3,
+                  allowedCellIndexes4
+                )
+
+                return (
+                  allowedCellsUnion.length === 4 && // x ?
+                  allowedCellIndexes.length >= 2 &&
+                  allowedCellIndexes2.length >= 2 &&
+                  allowedCellIndexes3.length >= 2 &&
+                  allowedCellIndexes4.length >= 2
+                )
+              })
+          ))
+        ))
+      ))
+
+    return boxCandidates.map((cellCandidates, indexInBox) => {
+      const hiddenQuadsCandidates = intersectingCellIndexesEntriesByCandidates
+        .filter(([candidate, allowedCellindexes]) => (
+          allowedCellindexes.includes(indexInBox)
+        ))
+        .map(([candidate, allowedCellindexes]) => candidate)
+
+      return hiddenQuadsCandidates.length > 0
+          ? cellCandidates.filter(cellCandidate => hiddenQuadsCandidates.includes(cellCandidate))
           : []
     })
   }))])) as Record<Dimension, BoardCandidates>
@@ -652,6 +678,28 @@ const candidatesDiffer = (candidatesA: BoardCandidates, candidatesB: BoardCandid
   }))
 )
 
+// Random utils
+const intersection = <T, U extends Array<T> = Array<T>>(a1: U, a2: U, ...rest: Array<U>): ReturnType<U['filter']> => {
+  const a12 = a1.filter(v1 => a2.includes(v1))
+  if (rest.length === 0) { return a12 as ReturnType<U['filter']> }
+  const [
+    next,
+    ...otherRest
+  ] = rest
+  return intersection<T, U>(a12 as U, next, ...otherRest)
+}
+
+const union = <T, U extends Array<T> = Array<T>>(a1: U, a2: U, ...rest: Array<U>): ReturnType<U['filter']> => {
+  const a12 = [...new Set([...a1, ...a2])]
+
+  if (rest.length === 0) { return a12 as ReturnType<U['filter']> }
+  const [
+    next,
+    ...otherRest
+  ] = rest
+  return union<T, U>(a12 as U, next, ...otherRest)
+}
+
 
 // Log utils
 const logBoard = (board: Board) => {
@@ -849,6 +897,7 @@ export {
   findHiddenSinglesCandidates,
   findHiddenPairsCandidates,
   findHiddenTripletsCandidates,
+  findHiddenQuadsCandidates,
   isBoardValid,
   isBoardOver,
   narrowCandidatesByFilled,
