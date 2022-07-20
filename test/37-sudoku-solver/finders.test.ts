@@ -4,10 +4,7 @@ import {
   Board,
   BoardCandidates,
   findHiddenSinglesCandidates,
-  findHiddenPairsCandidates,
-  findHiddenTripletsCandidates,
-  findHiddenQuadsCandidates,
-  logFullCandidates,
+  findHiddenSetsCandidates,
   getBoard,
   getBoardCandidates
 } from '../../src/37-sudoku-solver'
@@ -45,7 +42,7 @@ describe('SudokuSolver', () => {
       })
     })
 
-    describe('findHiddenPairsCandidates', () => {
+    describe('findHiddenSetsCandidates(2)', () => {
       it('should return consistent', () => {
         const input = [
           [['1', '2', '3'], ['1', '2'], [], [], [], [], [], [], []],
@@ -59,7 +56,7 @@ describe('SudokuSolver', () => {
           [[], [], [], [], [], [], [], [], []]
         ]
 
-        const actual = findHiddenPairsCandidates(input)
+        const actual = findHiddenSetsCandidates(2)(input)
         const expected = {
           row: [
             [['1', '2'], ['1', '2'], [], [], [], [], [], [], []],
@@ -102,7 +99,7 @@ describe('SudokuSolver', () => {
       })
     })
 
-    describe('findHiddenTripletsCandidates', () => {
+    describe('findHiddenSetsCandidates(3)', () => {
       it('should return consistent', () => {
         const input = [
           [['1', '2', '3', '4'], ['1', '2', '3'], [], [], [], ['1', '2'], [], [], []],
@@ -116,7 +113,7 @@ describe('SudokuSolver', () => {
           [[], [], [], [], [], [], [], [], ['8', '5', '3']]
         ]
 
-        const actual = findHiddenTripletsCandidates(input)
+        const actual = findHiddenSetsCandidates(3)(input)
         const expected = {
           row: [
             [['1', '2', '3'], ['1', '2', '3'], [], [], [], ['1', '2'], [], [], []],
@@ -153,15 +150,13 @@ describe('SudokuSolver', () => {
           ]
         }
 
-        // logFullCandidates(getBoardCandidates(actual.square, 'square')('row'))
-
         expect(actual.row).toEqual(expected.row)
         expect(actual.col).toEqual(expected.col)
         expect(actual.square).toEqual(expected.square)
       })
     })
 
-    describe('findHiddenQuadsCandidates', () => {
+    describe('findHiddenSetsCandidates(4)', () => {
       it('should return consistent', () => {
         const input = [
           [['1', '2', '3', '4', '5'], ['1', '2', '3', '4'], ['2', '3'], [], [], ['1', '4'], [], [], []],
@@ -175,7 +170,7 @@ describe('SudokuSolver', () => {
           [[], [], [], [], [], [], [], [], ['8', '5', '3']]
         ]
 
-        const actual = findHiddenQuadsCandidates(input)
+        const actual = findHiddenSetsCandidates(4)(input)
         const expected = {
           row: [
             [['1', '2', '3', '4'], ['1', '2', '3', '4'], ['2', '3'], [], [], ['1', '4'], [], [], []],
@@ -211,8 +206,6 @@ describe('SudokuSolver', () => {
             [[], [], [], [], [], [], [], [], []]
           ]
         }
-
-        // logFullCandidates(getBoardCandidates(actual.square, 'square')('row'))
 
         expect(actual.row).toEqual(expected.row)
         expect(actual.col).toEqual(expected.col)
