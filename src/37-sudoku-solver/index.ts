@@ -24,6 +24,7 @@ const _solveSudoku = (inputBoard: Board): Board => {
   let boardOver: boolean
 
   do {
+    // logFullBoard(currentBoard, currentCandidates)
     previousBoard = copyBoard(currentBoard)
     previousCandidates = copyCandidates(currentCandidates)
     somethingChanged = false
@@ -35,14 +36,17 @@ const _solveSudoku = (inputBoard: Board): Board => {
     const hiddenSinglesCandidates: BoardCandidates = findHiddenSinglesCandidates(currentCandidates)
     currentCandidates = narrowHiddenSinglesCandidates(currentCandidates)(hiddenSinglesCandidates)
 
-    const hiddenPairsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(2)(currentCandidates)
-    currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(hiddenPairsCandidates)
+    const pairsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(2)(currentCandidates)
+    currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(pairsCandidates)
+    currentCandidates = narrowNakedTuplesResultant(currentCandidates)(pairsCandidates)
 
-    const hiddenTripletsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(3)(currentCandidates)
-    currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(hiddenTripletsCandidates)
+    // const tripletsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(3)(currentCandidates)
+    // currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(tripletsCandidates)
+    // currentCandidates = narrowNakedTuplesResultant(currentCandidates)(tripletsCandidates)
 
-    // const hiddenQuadsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(4)(currentCandidates)
-    // currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(hiddenQuadsCandidates)
+    // const quadsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(4)(currentCandidates)
+    // currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(quadsCandidates)
+    // currentCandidates = narrowNakedTuplesResultant(currentCandidates)(quadsCandidates)
 
     currentBoard = fillNakedSinglesCandidates(EMPTY_VAL)(currentBoard, currentCandidates)
 
@@ -153,6 +157,30 @@ const narrowHiddenTuplesToNaked = (boardCandidates: BoardCandidates) => (boardHi
         ? cellCandidates.filter(cellCandidate => cellHiddenPairsCandidates.includes(cellCandidate))
         : cellCandidates
     }))
+  }, boardCandidates)
+)
+
+const narrowNakedTuplesResultant = (boardCandidates: BoardCandidates) => (tuplesCandidates: Record<Dimension, BoardCandidates>) => (
+  dimensions.reduce<BoardCandidates>((acc, dimension) => {
+    const dimensionTuplesCandidates = tuplesCandidates[dimension]
+    return acc.map((boxCandidates, boxIndex) => {
+      return boxCandidates.map((cellCandidates, indexInBox) => {
+        const [dimensionBoxIndex] = transformIndex([boxIndex, indexInBox])(dimension)
+        const boxTuplesCandidates = dimensionTuplesCandidates[dimensionBoxIndex]
+        const boxFlatTuplesCandidates = [...new Set(boxTuplesCandidates.flat())]
+
+        const cellTuplesCandidates = getCellCandidates(dimensionTuplesCandidates, dimension)('row', [boxIndex, indexInBox])
+
+        const cellDisallowedTuplesCandidates = boxFlatTuplesCandidates.filter(
+          // Every other tuple candidate in box
+          boxTupleCandidate => !cellTuplesCandidates.includes(boxTupleCandidate)
+        )
+  
+        return cellDisallowedTuplesCandidates.length > 0
+          ? cellCandidates.filter(cellCandidate => !cellDisallowedTuplesCandidates.includes(cellCandidate))
+          : cellCandidates
+      })
+    })
   }, boardCandidates)
 )
 
@@ -820,6 +848,7 @@ export {
   narrowResultantCandidatesByFilled,
   narrowHiddenTuplesToNaked,
   narrowHiddenSinglesCandidates,
+  narrowNakedTuplesResultant,
   generateInitialBoardCandidates
 }
 
