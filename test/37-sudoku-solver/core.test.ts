@@ -1,6 +1,6 @@
 import { AssertionError } from 'assert'
 import { expect } from 'earljs'
-import { Board, getFullBoardLog } from '../../src/37-sudoku-solver'
+import { Board } from '../../src/37-sudoku-solver'
 import { _solveSudoku, isBoardValid, isBoardOver } from '../../src/37-sudoku-solver'
 import { TestCase, testCases } from './util'
 

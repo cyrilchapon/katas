@@ -33,7 +33,7 @@ const _solveSudoku = (inputBoard: Board): Board => {
     currentCandidates = narrowCandidatesByFilled(EMPTY_VAL)(currentBoard, currentCandidates)
     currentCandidates = narrowResultantCandidatesByFilled(EMPTY_VAL)(currentBoard, currentCandidates)
 
-    const hiddenSinglesCandidates: BoardCandidates = findHiddenSinglesCandidates(currentCandidates)
+    const hiddenSinglesCandidates: BoardCandidates = findSingleCandidates(currentCandidates)
     currentCandidates = narrowHiddenSinglesCandidates(currentCandidates)(hiddenSinglesCandidates)
 
     const pairsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(2)(currentCandidates)
@@ -211,7 +211,6 @@ const findSingleCandidates = (boardCandidates: BoardCandidates) => {
     }))]
   }))
 }
-const findHiddenSinglesCandidates = findSingleCandidates
 
 const findTuplesCandidates = (n: 2 | 3 | 4) => (boardCandidates: BoardCandidates) => (
   Object.fromEntries(dimensions.map(dimension => [dimension, (new Array(9).fill(null).map((v, boxIndex) => {
@@ -842,7 +841,7 @@ export {
   getBoard,
   getBoardCandidates,
   getBox,
-  findHiddenSinglesCandidates,
+  findSingleCandidates,
   findTuplesCandidates,
   isBoardValid,
   isBoardOver,

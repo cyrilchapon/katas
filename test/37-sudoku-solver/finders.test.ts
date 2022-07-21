@@ -1,17 +1,13 @@
 import { expect } from 'earljs'
 
 import {
-  Board,
-  BoardCandidates,
-  findHiddenSinglesCandidates,
-  findTuplesCandidates,
-  getBoard,
-  getBoardCandidates
+  findSingleCandidates,
+  findTuplesCandidates
 } from '../../src/37-sudoku-solver'
 
 describe('SudokuSolver', () => {
   describe('Finders', () => {
-    describe('findHiddenSingleCandidates', () => {
+    describe('findSingleCandidates', () => {
       it('should return consistent', () => {
         const input = [
           [['1', '2'], ['1', '2'], [], [], [], [], [], [], []],
@@ -25,7 +21,7 @@ describe('SudokuSolver', () => {
           [[], ['1'], [], [], [], [], [], [], []]
         ]
 
-        const actual = findHiddenSinglesCandidates(input)
+        const actual = findSingleCandidates(input)
         const expected = [
           [['1'], [], [], [], [], [], [], [], []],
           [[], [], [], [], [], [], [], [], []],
