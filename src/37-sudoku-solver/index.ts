@@ -134,7 +134,7 @@ const narrowHiddenSinglesCandidates = (boardCandidates: BoardCandidates) => (boa
       (cellCandidates, indexInBox) => {
         const cellHiddenSinglesCandidates = boardHiddenSinglesCandidates[boxIndex][indexInBox]
         if (cellHiddenSinglesCandidates.length > 1) {
-          throw new Error(`Multiple hidden candidates found in cell ${boxIndex},${indexInBox}`)
+          throw new Error(`Multiple hidden candidates found in cell ${boxIndex},${indexInBox} : ${cellHiddenSinglesCandidates}`)
         }
         if (cellHiddenSinglesCandidates.length === 1) {
           return cellHiddenSinglesCandidates
@@ -184,49 +184,39 @@ const narrowNakedTuplesResultant = (boardCandidates: BoardCandidates) => (tuples
 
 
 // Finders
-const findHiddenSinglesCandidates = (boardCandidates: BoardCandidates) => (
-  // For each box...
-  boardCandidates.map(
-    // And each cell
-    (boxCandidates, boxIndex) => boxCandidates.map(
-      (cellCandidates, indexInBox) => {
-        // Find intersecting boxes,
-        const intersections = getCandidatesIntersections(boardCandidates)([boxIndex, indexInBox])
+const findSingleCandidates = (boardCandidates: BoardCandidates) => {
+  const singleCandidatesByDimensions = dimensions.map<[Dimension, BoardCandidates]>(dimension => [dimension, (new Array(9).fill(null).map((v, boxIndex) => {
+    const boxCandidates = getCandidates(boardCandidates)(dimension, boxIndex)
+    const cellIndexesByCandidates = getCellIndexesByCandidates(boxCandidates)
 
-        // And keep only cell candidates...
-        const hiddenSinglesCellCandidates = cellCandidates.filter(cellCandidate => (
-          // That for at least 1 intersecting box,
-          Object.entries(intersections).some(([dimension, [intersectingBoxCandidates, [intersectingBoxIndex, indexInIntersectingBox]]]) => (
-            // Has every of its cell
-            intersectingBoxCandidates.every((intersectingCellCandidates, intersectingCellIndexInBox) => {
-              return (
-                // Not include the candidate...
-                !intersectingCellCandidates.includes(cellCandidate) ||
-                // (or is the current cell itself)
-                intersectingCellIndexInBox === indexInIntersectingBox
-              )
-            })
-          ))
+    const singleIndexesByCandidate = cellIndexesByCandidates
+      .filter(([candidate, allowedCellIndexes]) => allowedCellIndexes.length === 1)
+
+    return boxCandidates.map((cellCandidates, indexInBox) => {
+      const singleCandidates = singleIndexesByCandidate
+        .filter(([candidate, allowedCellindexes]) => (
+          allowedCellindexes.includes(indexInBox)
         ))
+        .map(([candidate, allowedCellindexes]) => candidate)
 
-        return hiddenSinglesCellCandidates
-      }
-    )
-  )
-)
+      return singleCandidates.length > 0
+          ? singleCandidates
+          : []
+    })
+  }))])
+
+  return boardCandidates.map((boxCandidates, boxIndex) => boxCandidates.map((cellCandidates, indexInBox) => {
+    return [...new Set(singleCandidatesByDimensions.flatMap(([dimension, dimensionSingleCandidates]) => {
+      return getCellCandidates(dimensionSingleCandidates, dimension)('row', [boxIndex, indexInBox])
+    }))]
+  }))
+}
+const findHiddenSinglesCandidates = findSingleCandidates
 
 const findTuplesCandidates = (n: 2 | 3 | 4) => (boardCandidates: BoardCandidates) => (
   Object.fromEntries(dimensions.map(dimension => [dimension, (new Array(9).fill(null).map((v, boxIndex) => {
     const boxCandidates = getCandidates(boardCandidates)(dimension, boxIndex)
-
-    const candidatesRef = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
-    const cellIndexesByCandidates = candidatesRef.reduce<[string, number[]][]>((acc, candidate) => ([
-      ...acc,
-      [candidate, boxCandidates.reduce<number[]>((acc, otherCellCandidates, otherCellIndexInBox) => ([
-        ...acc,
-        ...(otherCellCandidates.includes(candidate) ? [otherCellIndexInBox] : [])
-      ]), [])]
-    ]), [] as [string, number[]][])
+    const cellIndexesByCandidates = getCellIndexesByCandidates(boxCandidates)
 
     const findIntersectingTupleCellUnionForCandidate = (maxDepth: typeof n) => (entries: [string, number[]][], initialCandidate: string) => {
       const _findIntersectingTupleCellUnionForCandidate = (prevCandidates: string[], prevAllowedCellIndexes: number[][], currentDepth: typeof maxDepth | 1) => {
@@ -621,6 +611,20 @@ const candidatesDiffer = (candidatesA: BoardCandidates, candidatesB: BoardCandid
     )
   }))
 )
+
+const getCellIndexesByCandidates = (boxCandidates: BoxCandidates) => {
+  const candidatesRef = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
+
+  const cellIndexesByCandidates = candidatesRef.reduce<[string, number[]][]>((acc, candidate) => ([
+    ...acc,
+    [candidate, boxCandidates.reduce<number[]>((acc, otherCellCandidates, otherCellIndexInBox) => ([
+      ...acc,
+      ...(otherCellCandidates.includes(candidate) ? [otherCellIndexInBox] : [])
+    ]), [])]
+  ]), [] as [string, number[]][])
+
+  return cellIndexesByCandidates
+}
 
 // Random utils
 const intersection = <T, U extends Array<T> = Array<T>>(a1: U, a2: U, ...rest: Array<U>): ReturnType<U['filter']> => {
