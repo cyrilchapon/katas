@@ -4,7 +4,7 @@ import {
   narrowCandidatesByFilled,
   narrowResultantCandidatesByFilled,
   narrowHiddenSinglesCandidates,
-  narrowHiddenSetsToNaked,
+  narrowHiddenTuplesToNaked,
   logFullCandidates
 } from '../../src/37-sudoku-solver'
 
@@ -213,7 +213,7 @@ describe('SudokuSolver', () => {
       })
     })
 
-    describe('narrowHiddenSetsToNaked', () => {
+    describe('narrowHiddenTuplesToNaked', () => {
       it('should return consistent', () => {
         const inputCandidates = [
           [['1', '2', '3'], ['1', '2'], [], [], [], [], [], [], []],
@@ -263,7 +263,7 @@ describe('SudokuSolver', () => {
           ]
         }
 
-        const actual = narrowHiddenSetsToNaked(inputCandidates)(inputHiddenPairsCandidates)
+        const actual = narrowHiddenTuplesToNaked(inputCandidates)(inputHiddenPairsCandidates)
 
         const expected = [
           [['1', '2'], ['1', '2'], [], [], [], [], [], [], []],
@@ -295,7 +295,7 @@ describe('SudokuSolver', () => {
 
         const inputHiddenTripletsCandidates = {
           row: [
-            [['1', '2', '3'], ['1', '2', '3'], [], [], [], ['1', '2'], [], [], []],
+            [['1', '2', '3'], ['1', '2', '3'], [], [], [], ['1', '2', '3'], [], [], []],
             [[], [], [], [], [], [], [], [], []],
             [[], [], [], [], [], [], [], [], []],
             [[], [], [], [], [], [], [], [], []],
@@ -314,14 +314,14 @@ describe('SudokuSolver', () => {
             [[], [], [], [], [], [], [], [], []],
             [[], [], [], [], [], [], [], [], []],
             [[], [], [], [], [], [], [], [], []],
-            [[], [], ['3', '5', '8'], [], [], [], [], ['8', '5'], ['8', '5', '3']]
+            [[], [], ['3', '5', '8'], [], [], [], [], ['3', '5', '8'], ['3', '5', '8']]
           ],
           square: [
             [[], [], [], [], [], [], [], [], []],
             [[], [], [], [], [], [], [], [], []],
             [[], [], [], [], [], [], [], [], []],
             [[], [], [], [], [], [], [], [], []],
-            [[], ['7', '6'], [], ['4', '6'], [], [], [], [], ['4', '7']],
+            [[], ['4', '6', '7'], [], ['4', '6', '7'], [], [], [], [], ['4', '6', '7']],
             [[], [], [], [], [], [], [], [], []],
             [[], [], [], [], [], [], [], [], []],
             [[], [], [], [], [], [], [], [], []],
@@ -329,7 +329,7 @@ describe('SudokuSolver', () => {
           ]
         }
 
-        const actual = narrowHiddenSetsToNaked(inputCandidates)(inputHiddenTripletsCandidates)
+        const actual = narrowHiddenTuplesToNaked(inputCandidates)(inputHiddenTripletsCandidates)
 
         const expected = [
           [['1', '2', '3'], ['1', '2', '3'], [], [], [], ['1', '2'], [], [], []],
@@ -361,7 +361,7 @@ describe('SudokuSolver', () => {
 
         const inputHiddenQuadsCandidates = {
           row: [
-            [['1', '2', '3', '4'], ['1', '2', '3', '4'], ['2', '3'], [], [], ['1', '4'], [], [], []],
+            [['1', '2', '3', '4'], ['1', '2', '3', '4'], ['1', '2', '3', '4'], [], [], ['1', '2', '3', '4'], [], [], []],
             [[], [], [], [], [], [], [], [], []],
             [[], [], [], [], [], [], [], [], []],
             [[], [], [], [], [], [], [], [], []],
@@ -380,14 +380,14 @@ describe('SudokuSolver', () => {
             [[], [], [], [], [], [], [], [], []],
             [[], [], [], [], [], [], [], [], []],
             [[], [], [], [], [], [], [], [], []],
-            [[], [], ['3', '5', '7', '8'], [], [], [], ['3', '7'], ['8', '5'], ['8', '5', '3']]
+            [[], [], ['3', '5', '7', '8'], [], [], [], ['3', '5', '7', '8'], ['3', '5', '7', '8'], ['3', '5', '7', '8']]
           ],
           square: [
             [[], [], [], [], [], [], [], [], []],
             [[], [], [], [], [], [], [], [], []],
             [[], [], [], [], [], [], [], [], []],
             [[], [], [], [], [], [], [], [], []],
-            [[], ['7', '6'], ['2', '6'], ['4', '6', '2'], [], [], [], [], ['4', '7']],
+            [[], ['2', '4', '6', '7'], ['2', '4', '6', '7'], ['2', '4', '6', '7'], [], [], [], [], ['2', '4', '6', '7']],
             [[], [], [], [], [], [], [], [], []],
             [[], [], [], [], [], [], [], [], []],
             [[], [], [], [], [], [], [], [], []],
@@ -395,7 +395,7 @@ describe('SudokuSolver', () => {
           ]
         }
 
-        const actual = narrowHiddenSetsToNaked(inputCandidates)(inputHiddenQuadsCandidates)
+        const actual = narrowHiddenTuplesToNaked(inputCandidates)(inputHiddenQuadsCandidates)
 
         const expected = [
           [['1', '2', '3', '4'], ['1', '2', '3', '4'], ['2', '3'], [], [], ['1', '4'], [], [], []],

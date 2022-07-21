@@ -35,14 +35,14 @@ const _solveSudoku = (inputBoard: Board): Board => {
     const hiddenSinglesCandidates: BoardCandidates = findHiddenSinglesCandidates(currentCandidates)
     currentCandidates = narrowHiddenSinglesCandidates(currentCandidates)(hiddenSinglesCandidates)
 
-    const hiddenPairsCandidates: Record<Dimension, BoardCandidates> = findHiddenSetsCandidates(2)(currentCandidates)
-    currentCandidates = narrowHiddenSetsToNaked(currentCandidates)(hiddenPairsCandidates)
+    const hiddenPairsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(2)(currentCandidates)
+    currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(hiddenPairsCandidates)
 
-    const hiddenTripletsCandidates: Record<Dimension, BoardCandidates> = findHiddenSetsCandidates(3)(currentCandidates)
-    currentCandidates = narrowHiddenSetsToNaked(currentCandidates)(hiddenTripletsCandidates)
+    const hiddenTripletsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(3)(currentCandidates)
+    currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(hiddenTripletsCandidates)
 
-    // const hiddenQuadsCandidates: Record<Dimension, BoardCandidates> = findHiddenSetsCandidates(4)(currentCandidates)
-    // currentCandidates = narrowHiddenSetsToNaked(currentCandidates)(hiddenQuadsCandidates)
+    // const hiddenQuadsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(4)(currentCandidates)
+    // currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(hiddenQuadsCandidates)
 
     currentBoard = fillNakedSinglesCandidates(EMPTY_VAL)(currentBoard, currentCandidates)
 
@@ -143,7 +143,7 @@ const narrowHiddenSinglesCandidates = (boardCandidates: BoardCandidates) => (boa
   )
 )
 
-const narrowHiddenSetsToNaked = (boardCandidates: BoardCandidates) => (boardHiddenPairsCandidates: Record<Dimension, BoardCandidates>) => (
+const narrowHiddenTuplesToNaked = (boardCandidates: BoardCandidates) => (boardHiddenPairsCandidates: Record<Dimension, BoardCandidates>) => (
   dimensions.reduce<BoardCandidates>((acc, dimension) => {
     const dimensionHiddenPairsCandidates = boardHiddenPairsCandidates[dimension]
     return acc.map((boxCandidates, boxIndex) => boxCandidates.map((cellCandidates, indexInBox) => {
@@ -189,7 +189,7 @@ const findHiddenSinglesCandidates = (boardCandidates: BoardCandidates) => (
   )
 )
 
-const findHiddenSetsCandidates = (n: 2 | 3 | 4) => (boardCandidates: BoardCandidates) => (
+const findTuplesCandidates = (n: 2 | 3 | 4) => (boardCandidates: BoardCandidates) => (
   Object.fromEntries(dimensions.map(dimension => [dimension, (new Array(9).fill(null).map((v, boxIndex) => {
     const boxCandidates = getCandidates(boardCandidates)(dimension, boxIndex)
 
@@ -202,48 +202,64 @@ const findHiddenSetsCandidates = (n: 2 | 3 | 4) => (boardCandidates: BoardCandid
       ]), [])]
     ]), [] as [string, number[]][])
 
-    const findDifferentCandidates = (maxDepth: typeof n, dim: any, box: any) => (entries: [string, number[]][]) => {
-      const _findDifferentCandidates = (prevCandidates: string[], prevAllowedCellIndexes: number[][], currentDepth: typeof maxDepth | 1): boolean => {
-        return entries
-          .filter(([candidate]) => prevCandidates.every(prevCandidate => prevCandidate !== candidate))
-          .some(([candidate, allowedCellIndexes]) => {
-            const newCandidates = [...prevCandidates, candidate]
-            const newAllowedCellIndexes = [...prevAllowedCellIndexes, allowedCellIndexes]
+    const findIntersectingTupleCellUnionForCandidate = (maxDepth: typeof n) => (entries: [string, number[]][], initialCandidate: string) => {
+      const _findIntersectingTupleCellUnionForCandidate = (prevCandidates: string[], prevAllowedCellIndexes: number[][], currentDepth: typeof maxDepth | 1) => {
+        let cellUnionForCandidate: number[] = []
 
-            if (currentDepth < maxDepth - 1) {
-              return _findDifferentCandidates(
-                newCandidates,
-                newAllowedCellIndexes,
-                currentDepth + 1 as typeof currentDepth
-              )
-            }
+        for (
+          const [subCandidate, allowedCellIndexes]
+          of entries
+            .filter(([subCandidate]) => prevCandidates.every(prevCandidate => prevCandidate !== subCandidate))
+        ) {
+          const newCandidates = [...prevCandidates, subCandidate]
+          const newAllowedCellIndexes = [...prevAllowedCellIndexes, allowedCellIndexes]
 
+          if (currentDepth < maxDepth - 1) {
+            cellUnionForCandidate = _findIntersectingTupleCellUnionForCandidate(
+              newCandidates,
+              newAllowedCellIndexes,
+              currentDepth + 1 as typeof currentDepth
+            )
+          } else {
             const allowedCellsUnion = union(...newAllowedCellIndexes as [number[], number[], ...number[][]])
-
-            return (
+            if (
               allowedCellsUnion.length === maxDepth &&
               newAllowedCellIndexes.every(newAllowedCellIndexes => newAllowedCellIndexes.length >= 2)
-            )
-          })
+            ) {
+              cellUnionForCandidate = allowedCellsUnion
+            }
+          }
+
+          if (cellUnionForCandidate.length > 0) {
+            break
+          }
+        }
+
+        return cellUnionForCandidate
       }
 
-      return _findDifferentCandidates
+      return _findIntersectingTupleCellUnionForCandidate(
+        [initialCandidate],
+        entries.filter(([candidate]) =>  candidate === initialCandidate).map(([,allowedCellIndexes]) => allowedCellIndexes),
+        1
+      )
     }
 
-    const intersectingCellIndexesEntriesByCandidates = cellIndexesByCandidates
-      .filter(([candidate, allowedCellIndexes], i, entries) => (
-        findDifferentCandidates(n, dimension, boxIndex)(entries)([candidate], [allowedCellIndexes], 1)
-      ))
+    const tuplesIndexesByCandidates = cellIndexesByCandidates
+      .map(([candidate], i, entries) => ([
+        candidate,
+        findIntersectingTupleCellUnionForCandidate(n)(entries, candidate)
+      ] as [string, number[]]))
 
     return boxCandidates.map((cellCandidates, indexInBox) => {
-      const hiddenTripletsCandidates = intersectingCellIndexesEntriesByCandidates
+      const tuplesCandidates = tuplesIndexesByCandidates
         .filter(([candidate, allowedCellindexes]) => (
           allowedCellindexes.includes(indexInBox)
         ))
         .map(([candidate, allowedCellindexes]) => candidate)
 
-      return hiddenTripletsCandidates.length > 0
-          ? cellCandidates.filter(cellCandidate => hiddenTripletsCandidates.includes(cellCandidate))
+      return tuplesCandidates.length > 0
+          ? tuplesCandidates
           : []
     })
   }))])) as Record<Dimension, BoardCandidates>
@@ -797,12 +813,12 @@ export {
   getBoardCandidates,
   getBox,
   findHiddenSinglesCandidates,
-  findHiddenSetsCandidates,
+  findTuplesCandidates,
   isBoardValid,
   isBoardOver,
   narrowCandidatesByFilled,
   narrowResultantCandidatesByFilled,
-  narrowHiddenSetsToNaked,
+  narrowHiddenTuplesToNaked,
   narrowHiddenSinglesCandidates,
   generateInitialBoardCandidates
 }
