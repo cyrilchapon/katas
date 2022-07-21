@@ -60,9 +60,7 @@ const _solveSudoku = (inputBoard: Board): Board => {
     if (!isBoardValid(EMPTY_VAL)(currentBoard)) {
       throw new AssertionError({ message: 'Invalid board' })
     }
-  } while (somethingChanged || boardOver)
-
-  logFullBoard(currentBoard, currentCandidates)
+  } while (somethingChanged && !boardOver)
 
   return currentBoard
 }
