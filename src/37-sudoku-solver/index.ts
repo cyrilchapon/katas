@@ -1,5 +1,3 @@
-import { AssertionError } from "assert"
-
 const dimensions = ['row', 'col', 'square'] as const
 type Dimension = typeof dimensions[number]
 
@@ -59,10 +57,6 @@ const _solveSudoku = (inputBoard: Board): Board => {
     )
 
     boardOver = isBoardOver(EMPTY_VAL)(currentBoard)
-
-    if (!isBoardValid(EMPTY_VAL)(currentBoard)) {
-      throw new AssertionError({ message: 'Invalid board' })
-    }
   } while (somethingChanged && !boardOver)
 
   return currentBoard
