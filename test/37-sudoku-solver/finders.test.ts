@@ -3,7 +3,7 @@ import { expect } from 'earljs'
 import {
   findSingleCandidates,
   findTuplesCandidates,
-  findXWingCandidates,
+  findFishCandidates,
   logFullCandidates
 } from '../../src/37-sudoku-solver'
 
@@ -211,7 +211,7 @@ describe('SudokuSolver', () => {
       })
     })
 
-    describe('findXWingCandidates', () => {
+    describe('findFishCandidates(2)', () => {
       it('should return consistent', () => {
         const input = [
           [['1'], ['1'], [], [], [], [], [], [], []],
@@ -225,7 +225,7 @@ describe('SudokuSolver', () => {
           [[], [], ['4'], [], ['4'], [], [], [], ['4']]
         ]
   
-        const actual = findXWingCandidates(input)
+        const actual = findFishCandidates(2)(input)
         const expected = {
           row: [
             [['1'], ['1'], [], [], [], [], [], [], []],
