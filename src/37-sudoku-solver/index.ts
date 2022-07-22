@@ -340,16 +340,6 @@ const findXWingCandidates = (boardCandidates: BoardCandidates) => (
     const entry = [dimension, dimensionBoardCandidates.map(
       (boxCandidates, boxIndex) => boxCandidates.map(
         (cellCandidates, indexInBox) => {
-          // if (dimension === 'col' && boxIndex === 1) {
-          //   console.log(boxesXWingCandidates[boxIndex])
-          //   console.log((
-          //     boxesXWingCandidates[boxIndex]
-          //       .filter(([candidate, allowedCellIndexes]) => (
-          //         allowedCellIndexes.includes(indexInBox)
-          //       ))
-          //       .map(([candidate]) => candidate)
-          //   ))
-          // }
           return (
             boxesXWingCandidates[boxIndex]
               .filter(([candidate, allowedCellIndexes]) => (
