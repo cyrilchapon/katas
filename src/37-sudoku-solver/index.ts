@@ -40,13 +40,16 @@ const _solveSudoku = (inputBoard: Board): Board => {
     currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(pairsCandidates)
     currentCandidates = narrowNakedTuplesResultant(currentCandidates)(pairsCandidates)
 
-    // const tripletsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(3)(currentCandidates)
-    // currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(tripletsCandidates)
-    // currentCandidates = narrowNakedTuplesResultant(currentCandidates)(tripletsCandidates)
+    const tripletsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(3)(currentCandidates)
+    currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(tripletsCandidates)
+    currentCandidates = narrowNakedTuplesResultant(currentCandidates)(tripletsCandidates)
 
-    // const quadsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(4)(currentCandidates)
-    // currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(quadsCandidates)
-    // currentCandidates = narrowNakedTuplesResultant(currentCandidates)(quadsCandidates)
+    const quadsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(4)(currentCandidates)
+    currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(quadsCandidates)
+    currentCandidates = narrowNakedTuplesResultant(currentCandidates)(quadsCandidates)
+
+    const xWingsCandidates = findXWingCandidates(currentCandidates)
+    currentCandidates = narrowXWingResultant(currentCandidates)(xWingsCandidates)
 
     currentBoard = fillNakedSinglesCandidates(EMPTY_VAL)(currentBoard, currentCandidates)
 
@@ -182,6 +185,35 @@ const narrowNakedTuplesResultant = (boardCandidates: BoardCandidates) => (tuples
   }, boardCandidates)
 )
 
+const narrowXWingResultant = (boardCandidates: BoardCandidates) => (xWingCandidates: Record<'row' | 'col', BoardCandidates>) => {
+  const findIntersectingLineDimension = (srcDimension: 'row' | 'col'): 'row' | 'col' => srcDimension === 'row' ? 'col' : 'row'
+
+  return boardCandidates.map((boxCandidates, boxIndex) => {
+    return boxCandidates.map((cellCandidates, indexInBox) => {
+      return (['row', 'col'] as const).reduce<string[]>((acc, xWingDimension) => {
+        const xWingDimensionCandidates = xWingCandidates[xWingDimension]
+
+        const intersectingDimension = findIntersectingLineDimension(xWingDimension)
+        const [
+          intersectingDimensionBoxIndex,
+          intersectingDimensionIndexInBox
+        ] = transformIndex([boxIndex, indexInBox])(intersectingDimension)
+        const intersectingXWingBoxCandidates = getCandidates(xWingDimensionCandidates, xWingDimension)(intersectingDimension, intersectingDimensionBoxIndex)
+        const flatIntersectingXWingBoxCandidates = intersectingXWingBoxCandidates.flat()
+
+        const xWingCellCandidates = intersectingXWingBoxCandidates[intersectingDimensionIndexInBox]
+
+        const xWingCellDisallowedCandidates = flatIntersectingXWingBoxCandidates.filter(
+          // Every other xWing candidate in box
+          boxXWingCandidate => !xWingCellCandidates.includes(boxXWingCandidate)
+        )
+
+        return acc.filter(cellCandidate => !xWingCellDisallowedCandidates.includes(cellCandidate))
+      }, cellCandidates)
+    })
+  })
+}
+
 
 // Finders
 const findSingleCandidates = (boardCandidates: BoardCandidates) => {
@@ -205,11 +237,11 @@ const findSingleCandidates = (boardCandidates: BoardCandidates) => {
     })
   }))])
 
-  return boardCandidates.map((boxCandidates, boxIndex) => boxCandidates.map((cellCandidates, indexInBox) => {
-    return [...new Set(singleCandidatesByDimensions.flatMap(([dimension, dimensionSingleCandidates]) => {
-      return getCellCandidates(dimensionSingleCandidates, dimension)('row', [boxIndex, indexInBox])
-    }))]
-  }))
+  return boardCandidates.map((boxCandidates, boxIndex) => boxCandidates.map((cellCandidates, indexInBox) => (
+    [...new Set(singleCandidatesByDimensions.flatMap(([dimension, dimensionSingleCandidates]) => (
+      getCellCandidates(dimensionSingleCandidates, dimension)('row', [boxIndex, indexInBox])
+    )))]
+  )))
 }
 
 const findTuplesCandidates = (n: 2 | 3 | 4) => (boardCandidates: BoardCandidates) => (
@@ -266,18 +298,77 @@ const findTuplesCandidates = (n: 2 | 3 | 4) => (boardCandidates: BoardCandidates
         findIntersectingTupleCellUnionForCandidate(n)(entries, candidate)
       ] as [string, number[]]))
 
-    return boxCandidates.map((cellCandidates, indexInBox) => {
-      const tuplesCandidates = tuplesIndexesByCandidates
+    return boxCandidates.map((cellCandidates, indexInBox) => (
+      tuplesIndexesByCandidates
         .filter(([candidate, allowedCellindexes]) => (
           allowedCellindexes.includes(indexInBox)
         ))
         .map(([candidate, allowedCellindexes]) => candidate)
-
-      return tuplesCandidates.length > 0
-          ? tuplesCandidates
-          : []
-    })
+    ))
   }))])) as Record<Dimension, BoardCandidates>
+)
+
+const findXWingCandidates = (boardCandidates: BoardCandidates) => (
+  Object.fromEntries((['row', 'col'] as Dimension[]).map(dimension => {
+    const dimensionBoardCandidates = getBoardCandidates(boardCandidates)(dimension)
+    const boardCellIndexesByCandidates = getBoardCellIndexesByCandidates(dimensionBoardCandidates)
+
+    const boxesCouplesCandidates = boardCellIndexesByCandidates.map(
+      (cellIndexesByCandidates, boxIndex) => {
+        return cellIndexesByCandidates
+          .filter(([candidate, allowedCellIndexes]) => (
+            allowedCellIndexes.length === 2
+          ))
+      }
+    )
+
+    const boxesXWingCandidates = boxesCouplesCandidates.map(
+      (boxCellIndexesByCandidates, boxIndex) => {
+        // Keep only candidates
+        return boxCellIndexesByCandidates.filter(([candidate, allowedCellIndexes]) => (
+          // Where another box
+          boxesCouplesCandidates.some((otherBoxCellIndexesByCandidates, otherBoxIndex) => (
+            // is different
+            boxIndex !== otherBoxIndex &&
+            otherBoxCellIndexesByCandidates
+              .some(([otherCandidate, otherAllowedCellIndexes]) => (
+                otherCandidate === candidate &&
+                (
+                  union(allowedCellIndexes, otherAllowedCellIndexes).length === 2 &&
+                  intersection(allowedCellIndexes, otherAllowedCellIndexes).length === 2
+                )
+              ))
+          ))
+        ))
+      }
+    )
+
+    const entry = [dimension, dimensionBoardCandidates.map(
+      (boxCandidates, boxIndex) => boxCandidates.map(
+        (cellCandidates, indexInBox) => {
+          // if (dimension === 'col' && boxIndex === 1) {
+          //   console.log(boxesXWingCandidates[boxIndex])
+          //   console.log((
+          //     boxesXWingCandidates[boxIndex]
+          //       .filter(([candidate, allowedCellIndexes]) => (
+          //         allowedCellIndexes.includes(indexInBox)
+          //       ))
+          //       .map(([candidate]) => candidate)
+          //   ))
+          // }
+          return (
+            boxesXWingCandidates[boxIndex]
+              .filter(([candidate, allowedCellIndexes]) => (
+                allowedCellIndexes.includes(indexInBox)
+              ))
+              .map(([candidate]) => candidate)
+          )
+        }
+      )
+    )]
+
+    return entry
+  })) as Record<Dimension, BoardCandidates>
 )
 
 // Dimensions utils
@@ -611,6 +702,22 @@ const candidatesDiffer = (candidatesA: BoardCandidates, candidatesB: BoardCandid
   }))
 )
 
+const getBoardCellIndexesByCandidates = (boardCandidates: BoardCandidates) => {
+  const candidatesRef = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
+
+  const cellIndexesByCandidates = boardCandidates.map(boxCandidates =>
+    candidatesRef.reduce<[string, number[]][]>((acc, candidate) => ([
+      ...acc,
+      [candidate, boxCandidates.reduce<number[]>((acc, otherCellCandidates, otherCellIndexInBox) => ([
+        ...acc,
+        ...(otherCellCandidates.includes(candidate) ? [otherCellIndexInBox] : [])
+      ]), [])]
+    ]), [] as [string, number[]][])
+  )
+
+  return cellIndexesByCandidates
+}
+
 const getCellIndexesByCandidates = (boxCandidates: BoxCandidates) => {
   const candidatesRef = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
 
@@ -843,6 +950,7 @@ export {
   getBox,
   findSingleCandidates,
   findTuplesCandidates,
+  findXWingCandidates,
   isBoardValid,
   isBoardOver,
   narrowCandidatesByFilled,
@@ -850,6 +958,7 @@ export {
   narrowHiddenTuplesToNaked,
   narrowHiddenSinglesCandidates,
   narrowNakedTuplesResultant,
+  narrowXWingResultant,
   generateInitialBoardCandidates
 }
 

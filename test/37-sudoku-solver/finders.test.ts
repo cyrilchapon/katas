@@ -2,7 +2,9 @@ import { expect } from 'earljs'
 
 import {
   findSingleCandidates,
-  findTuplesCandidates
+  findTuplesCandidates,
+  findXWingCandidates,
+  logFullCandidates
 } from '../../src/37-sudoku-solver'
 
 describe('SudokuSolver', () => {
@@ -206,6 +208,51 @@ describe('SudokuSolver', () => {
         expect(actual.row).toEqual(expected.row)
         expect(actual.col).toEqual(expected.col)
         expect(actual.square).toEqual(expected.square)
+      })
+    })
+
+    describe('findXWingCandidates', () => {
+      it('should return consistent', () => {
+        const input = [
+          [['1'], ['1'], [], [], [], [], [], [], []],
+          [[], [], ['4'], [], [], [], ['4'], [], ['4']],
+          [['1'], [], [], [], [], [], [], [], []],
+          [[], [], [], ['3'], [], [], [], [], []],
+          [[], [], ['1'], [], [], [], [], [], []],
+          [['1'], [], [], [], [], ['7'], [], [], []],
+          [[], [], [], [], [], [], [], [], []],
+          [['1'], ['1'], [], [], [], [], [], [], ['6', '8']],
+          [[], [], ['4'], [], ['4'], [], [], [], ['4']]
+        ]
+  
+        const actual = findXWingCandidates(input)
+        const expected = {
+          row: [
+            [['1'], ['1'], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [['1'], ['1'], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []]
+          ],
+          col: [
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], ['4'], [], [], [], [], [], [], ['4']],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], [], [], [], [], [], [], [], []],
+            [[], ['4'], [], [], [], [], [], [], ['4']]
+          ]
+        }
+
+        expect(actual.row).toEqual(expected.row)
+        expect(actual.col).toEqual(expected.col)
       })
     })
   })
