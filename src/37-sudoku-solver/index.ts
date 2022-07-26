@@ -302,103 +302,73 @@ const findTuplesCandidates = (n: 2 | 3 | 4) => (boardCandidates: BoardCandidates
   }))])) as Record<Dimension, BoardCandidates>
 )
 
-const findXWingCandidatesBack = (boardCandidates: BoardCandidates) => (
-  Object.fromEntries((['row', 'col'] as Dimension[]).map(dimension => {
-    const dimensionBoardCandidates = getBoardCandidates(boardCandidates)(dimension)
-    const boardCellIndexesByCandidates = getBoardCellIndexesByCandidates(dimensionBoardCandidates)
-
-    const boxesCouplesCandidates = boardCellIndexesByCandidates.map(
-      (cellIndexesByCandidates, boxIndex) => {
-        return cellIndexesByCandidates
-          .filter(([candidate, allowedCellIndexes]) => (
-            allowedCellIndexes.length === 2
-          ))
-      }
-    )
-
-    const boxesXWingCandidates = boxesCouplesCandidates.map(
-      (boxCellIndexesByCandidates, boxIndex) => {
-        // Keep only candidates
-        return boxCellIndexesByCandidates.filter(([candidate, allowedCellIndexes]) => (
-          // Where another box
-          boxesCouplesCandidates.some((otherBoxCellIndexesByCandidates, otherBoxIndex) => (
-            // is different
-            boxIndex !== otherBoxIndex &&
-            otherBoxCellIndexesByCandidates
-              .some(([otherCandidate, otherAllowedCellIndexes]) => (
-                otherCandidate === candidate &&
-                (
-                  union(allowedCellIndexes, otherAllowedCellIndexes).length === 2 &&
-                  intersection(allowedCellIndexes, otherAllowedCellIndexes).length === 2
-                )
-              ))
-          ))
-        ))
-      }
-    )
-
-    const entry = [dimension, dimensionBoardCandidates.map(
-      (boxCandidates, boxIndex) => boxCandidates.map(
-        (cellCandidates, indexInBox) => {
-          return (
-            boxesXWingCandidates[boxIndex]
-              .filter(([candidate, allowedCellIndexes]) => (
-                allowedCellIndexes.includes(indexInBox)
-              ))
-              .map(([candidate]) => candidate)
-          )
-        }
-      )
-    )]
-
-    return entry
-  })) as Record<Dimension, BoardCandidates>
-)
-
 const findFishCandidates = (n: 2 | 3 | 4) => (boardCandidates: BoardCandidates) => (
   Object.fromEntries((['row', 'col'] as Dimension[]).map(dimension => {
     const dimensionBoardCandidates = getBoardCandidates(boardCandidates)(dimension)
     const boardCellIndexesByCandidates = getBoardCellIndexesByCandidates(dimensionBoardCandidates)
 
-    const boxesCouplesCandidates = boardCellIndexesByCandidates.map(
-      (cellIndexesByCandidates, boxIndex) => {
-        return cellIndexesByCandidates
-          .filter(([candidate, allowedCellIndexes]) => (
-            allowedCellIndexes.length === 2
-          ))
-      }
-    )
+    const findXWingCellUnionForCandidate = (maxDepth: typeof n) => (boardEntries: [string, number[]][][], initialCandidate: string, initialBoxIndex: number) => {
+      const candidateBoxEntries = boardEntries.map(boxEntries => boxEntries.find(([subCandidate]) => subCandidate === initialCandidate)![1])
 
-    const boxesXWingCandidates = boxesCouplesCandidates.map(
-      (boxCellIndexesByCandidates, boxIndex) => {
-        // Keep only candidates
-        return boxCellIndexesByCandidates.filter(([candidate, allowedCellIndexes]) => (
-          // Where another boxe
-          boxesCouplesCandidates.filter((otherBoxCellIndexesByCandidates, otherBoxIndex) => (
-            // is different
-            boxIndex !== otherBoxIndex &&
-            // and has a candidate
-            otherBoxCellIndexesByCandidates
-              .some(([otherCandidate, otherAllowedCellIndexes]) => (
-                // which is the same
-                otherCandidate === candidate &&
-                // and is contained in same cells indexes
-                (
-                  union(allowedCellIndexes, otherAllowedCellIndexes).length >= 2 &&
-                  union(allowedCellIndexes, otherAllowedCellIndexes).length <= n &&
-                  intersection(allowedCellIndexes, otherAllowedCellIndexes).length === n
-                )
-              ))
-          )).length === (n - 1)
-        ))
+      const _findXWingCellUnionForCandidate = (prevBoxesIndexes: number[], prevAllowedCellIndexes: number[][], currentDepth: typeof maxDepth | 1) => {
+        let cellUnionForCandidate: number[] = []
+
+        for (let i = 0; i < candidateBoxEntries.length; i++) {
+          const boxIndex = i
+          const boxCandidateAllowedCellIndexes = candidateBoxEntries[boxIndex]
+
+          if (prevBoxesIndexes.includes(boxIndex)) {
+            continue
+          }
+
+          const newBoxIndexes = [...prevBoxesIndexes, boxIndex]
+          const newAllowedCellIndexes = [...prevAllowedCellIndexes, boxCandidateAllowedCellIndexes]
+
+          if (currentDepth < maxDepth - 1) {
+            cellUnionForCandidate = _findXWingCellUnionForCandidate(
+              newBoxIndexes,
+              newAllowedCellIndexes,
+              currentDepth + 1 as typeof currentDepth
+            )
+          } else {
+            const allowedCellsUnion = union(...newAllowedCellIndexes as [number[], number[], ...number[][]])
+            if (
+              allowedCellsUnion.length === maxDepth &&
+              newAllowedCellIndexes.every(newAllowedCellIndexes => newAllowedCellIndexes.length >= 2)
+            ) {
+              cellUnionForCandidate = allowedCellsUnion
+            }
+          }
+
+          if (cellUnionForCandidate.length > 0) {
+            break
+          }
+        }
+
+        return cellUnionForCandidate
       }
+
+      return _findXWingCellUnionForCandidate(
+        [initialBoxIndex],
+        boardEntries[initialBoxIndex].filter(([candidate]) =>  candidate === initialCandidate).map(([,allowedCellIndexes]) => allowedCellIndexes),
+        1
+      )
+    }
+
+    const boxesFishCandidates = boardCellIndexesByCandidates.map(
+      (boxCellIndexesByCandidates, boxIndex) => (
+        boxCellIndexesByCandidates.map(([candidate]) => [
+          candidate,
+          findXWingCellUnionForCandidate(n)(boardCellIndexesByCandidates, candidate, boxIndex)
+        ] as [string, number[]])
+      )
     )
 
     const entry = [dimension, dimensionBoardCandidates.map(
       (boxCandidates, boxIndex) => boxCandidates.map(
         (cellCandidates, indexInBox) => {
           return (
-            boxesXWingCandidates[boxIndex]
+            boxesFishCandidates[boxIndex]
               .filter(([candidate, allowedCellIndexes]) => (
                 allowedCellIndexes.includes(indexInBox)
               ))
