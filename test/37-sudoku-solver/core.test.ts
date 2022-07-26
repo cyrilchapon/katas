@@ -11,15 +11,16 @@ describe('SudokuSolver', () => {
   describe('_solveSudoku()', () => {
     Object
       .entries(testCases)
-      .filter(([testCaseStyle, testCase]) => (
-        ([
-          'easy',
-          'medium',
-          'hard',
-          'expert',
-          'hardcore'
-        ] as string[]).includes(testCaseStyle))
-      )
+      // .filter(([testCaseStyle, testCase]) => (
+      //   ([
+      //     'easy',
+      //     'medium',
+      //     'hard',
+      //     'expert',
+      //     'hardcore',
+      //     'extreme'
+      //   ] as string[]).includes(testCaseStyle))
+      // )
       .forEach(([testCaseStyle, testCase]) => {
         describe(`${testCaseStyle} case`, () => {
           it('Should produce a valid board', () => {

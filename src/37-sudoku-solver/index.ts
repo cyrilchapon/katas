@@ -11,6 +11,14 @@ type CellIndex = [number, number]
 
 const EMPTY_VAL = '.'
 
+const solveSudoku = (inputBoard: Board): void => {
+  const solvedBoard = _solveSudoku(inputBoard)
+
+  solvedBoard.forEach((solvedBox, boxIndex) => solvedBox.forEach(
+    (solvedCell, indexInBox) => inputBoard[boxIndex][indexInBox] = solvedCell
+  ))
+}
+
 const _solveSudoku = (inputBoard: Board): Board => {
   let previousBoard: Board
   let previousCandidates: BoardCandidates
@@ -27,34 +35,44 @@ const _solveSudoku = (inputBoard: Board): Board => {
     previousCandidates = copyCandidates(currentCandidates)
     boardOver = false
 
-    currentCandidates = narrowCandidatesByFilled(EMPTY_VAL)(currentBoard, currentCandidates)
-    currentCandidates = narrowResultantCandidatesByFilled(EMPTY_VAL)(currentBoard, currentCandidates)
-
-    const hiddenSinglesCandidates: BoardCandidates = findSingleCandidates(currentCandidates)
-    currentCandidates = narrowHiddenSinglesCandidates(currentCandidates)(hiddenSinglesCandidates)
-
-    const pairsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(2)(currentCandidates)
-    currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(pairsCandidates)
-    currentCandidates = narrowNakedTuplesResultant(currentCandidates)(pairsCandidates)
-
-    if (noChangeCpt >= 1) {
+    if (noChangeCpt === 0) {
+      currentCandidates = narrowCandidatesByFilled(EMPTY_VAL)(currentBoard, currentCandidates)
+      currentCandidates = narrowResultantCandidatesByFilled(EMPTY_VAL)(currentBoard, currentCandidates)
+    } else if (noChangeCpt === 1) {
+      const hiddenSinglesCandidates: BoardCandidates = findSingleCandidates(currentCandidates)
+      currentCandidates = narrowHiddenSinglesCandidates(currentCandidates)(hiddenSinglesCandidates)
+    } else if (noChangeCpt === 2) {
+      const pairsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(2)(currentCandidates)
+      currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(pairsCandidates)
+      currentCandidates = narrowNakedTuplesResultant(currentCandidates)(pairsCandidates)
+  
+      const xWingsCandidates = findFishCandidates(2)(currentCandidates)
+      currentCandidates = narrowXWingResultant(currentCandidates)(xWingsCandidates)
+    } else if (noChangeCpt === 3) {
       const tripletsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(3)(currentCandidates)
       currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(tripletsCandidates)
       currentCandidates = narrowNakedTuplesResultant(currentCandidates)(tripletsCandidates)
 
-      const xWingsCandidates = findFishCandidates(2)(currentCandidates)
-      currentCandidates = narrowXWingResultant(currentCandidates)(xWingsCandidates)
-    }
-
-    if (noChangeCpt >= 2) {
-      const swordFishCandidates = findFishCandidates(3)(currentCandidates)
-      currentCandidates = narrowXWingResultant(currentCandidates)(swordFishCandidates)
-    }
-
-    if (noChangeCpt >= 3) {
+      const swordfishCandidates = findFishCandidates(3)(currentCandidates)
+      currentCandidates = narrowXWingResultant(currentCandidates)(swordfishCandidates)
+    } else if (noChangeCpt === 4) {
       const quadsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(4)(currentCandidates)
       currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(quadsCandidates)
       currentCandidates = narrowNakedTuplesResultant(currentCandidates)(quadsCandidates)
+
+      const jellyfishCandidates = findFishCandidates(4)(currentCandidates)
+      currentCandidates = narrowXWingResultant(currentCandidates)(jellyfishCandidates)
+    } else if (noChangeCpt === 5) {
+      const quadsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(4)(currentCandidates)
+      currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(quadsCandidates)
+      currentCandidates = narrowNakedTuplesResultant(currentCandidates)(quadsCandidates)
+
+      const squirmbagCandidates = findFishCandidates(5)(currentCandidates)
+      currentCandidates = narrowXWingResultant(currentCandidates)(squirmbagCandidates)
+    } else if (noChangeCpt === 6) {
+      const qintsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(5)(currentCandidates)
+      currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(qintsCandidates)
+      currentCandidates = narrowNakedTuplesResultant(currentCandidates)(qintsCandidates)
     }
 
     currentBoard = fillNakedSinglesCandidates(EMPTY_VAL)(currentBoard, currentCandidates)
@@ -71,7 +89,7 @@ const _solveSudoku = (inputBoard: Board): Board => {
     }
 
     boardOver = isBoardOver(EMPTY_VAL)(currentBoard)
-  } while (noChangeCpt <= 3 && !boardOver)
+  } while (noChangeCpt <= 6 && !boardOver)
 
   return currentBoard
 }
@@ -252,7 +270,7 @@ const findSingleCandidates = (boardCandidates: BoardCandidates) => {
   )))
 }
 
-const findTuplesCandidates = (n: 2 | 3 | 4) => (boardCandidates: BoardCandidates) => (
+const findTuplesCandidates = (n: 2 | 3 | 4 | 5) => (boardCandidates: BoardCandidates) => (
   Object.fromEntries(dimensions.map(dimension => [dimension, (new Array(9).fill(null).map((v, boxIndex) => {
     const boxCandidates = getCandidates(boardCandidates)(dimension, boxIndex)
     const cellIndexesByCandidates = getCellIndexesByCandidates(boxCandidates)
@@ -316,7 +334,7 @@ const findTuplesCandidates = (n: 2 | 3 | 4) => (boardCandidates: BoardCandidates
   }))])) as Record<Dimension, BoardCandidates>
 )
 
-const findFishCandidates = (n: 2 | 3 | 4) => (boardCandidates: BoardCandidates) => (
+const findFishCandidates = (n: 2 | 3 | 4 | 5) => (boardCandidates: BoardCandidates) => (
   Object.fromEntries((['row', 'col'] as Dimension[]).map(dimension => {
     const dimensionBoardCandidates = getBoardCandidates(boardCandidates)(dimension)
     const boardCellIndexesByCandidates = getBoardCellIndexesByCandidates(dimensionBoardCandidates)
