@@ -18,14 +18,13 @@ const _solveSudoku = (inputBoard: Board): Board => {
   let currentBoard = copyBoard(inputBoard)
   let currentCandidates = generateInitialBoardCandidates()
 
-  let somethingChanged: boolean
+  let noChangeCpt: number = 0
   let boardOver: boolean
 
   do {
     // logFullBoard(currentBoard, currentCandidates)
     previousBoard = copyBoard(currentBoard)
     previousCandidates = copyCandidates(currentCandidates)
-    somethingChanged = false
     boardOver = false
 
     currentCandidates = narrowCandidatesByFilled(EMPTY_VAL)(currentBoard, currentCandidates)
@@ -38,26 +37,41 @@ const _solveSudoku = (inputBoard: Board): Board => {
     currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(pairsCandidates)
     currentCandidates = narrowNakedTuplesResultant(currentCandidates)(pairsCandidates)
 
-    const tripletsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(3)(currentCandidates)
-    currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(tripletsCandidates)
-    currentCandidates = narrowNakedTuplesResultant(currentCandidates)(tripletsCandidates)
+    if (noChangeCpt >= 1) {
+      const tripletsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(3)(currentCandidates)
+      currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(tripletsCandidates)
+      currentCandidates = narrowNakedTuplesResultant(currentCandidates)(tripletsCandidates)
 
-    const quadsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(4)(currentCandidates)
-    currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(quadsCandidates)
-    currentCandidates = narrowNakedTuplesResultant(currentCandidates)(quadsCandidates)
+      const xWingsCandidates = findFishCandidates(2)(currentCandidates)
+      currentCandidates = narrowXWingResultant(currentCandidates)(xWingsCandidates)
+    }
 
-    const xWingsCandidates = findFishCandidates(2)(currentCandidates)
-    currentCandidates = narrowXWingResultant(currentCandidates)(xWingsCandidates)
+    if (noChangeCpt >= 2) {
+      const swordFishCandidates = findFishCandidates(3)(currentCandidates)
+      currentCandidates = narrowXWingResultant(currentCandidates)(swordFishCandidates)
+    }
+
+    if (noChangeCpt >= 3) {
+      const quadsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(4)(currentCandidates)
+      currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(quadsCandidates)
+      currentCandidates = narrowNakedTuplesResultant(currentCandidates)(quadsCandidates)
+    }
 
     currentBoard = fillNakedSinglesCandidates(EMPTY_VAL)(currentBoard, currentCandidates)
 
-    somethingChanged = (
+    const somethingChanged = (
       boardsDiffer(previousBoard, currentBoard) ||
       candidatesDiffer(previousCandidates, currentCandidates)
     )
 
+    if (!somethingChanged) {
+      noChangeCpt++
+    } else {
+      noChangeCpt = 0
+    }
+
     boardOver = isBoardOver(EMPTY_VAL)(currentBoard)
-  } while (somethingChanged && !boardOver)
+  } while (noChangeCpt <= 3 && !boardOver)
 
   return currentBoard
 }

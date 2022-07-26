@@ -12,13 +12,13 @@ describe('SudokuSolver', () => {
     Object
       .entries(testCases)
       .filter(([testCaseStyle, testCase]) => (
-        [
+        ([
           'easy',
           'medium',
           'hard',
           'expert',
           'hardcore'
-        ].includes(testCaseStyle))
+        ] as string[]).includes(testCaseStyle))
       )
       .forEach(([testCaseStyle, testCase]) => {
         describe(`${testCaseStyle} case`, () => {
