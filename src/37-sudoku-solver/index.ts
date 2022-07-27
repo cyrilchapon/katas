@@ -12,14 +12,14 @@ type CellIndex = [number, number]
 const EMPTY_VAL = '.'
 
 const solveSudoku = (inputBoard: Board): void => {
-  const solvedBoard = _solveSudoku(inputBoard)
+  const [solvedBoard] = _solveSudoku(inputBoard)
 
   solvedBoard.forEach((solvedBox, boxIndex) => solvedBox.forEach(
     (solvedCell, indexInBox) => inputBoard[boxIndex][indexInBox] = solvedCell
   ))
 }
 
-const _solveSudoku = (inputBoard: Board): Board => {
+const _solveSudoku = (inputBoard: Board): [Board, BoardCandidates] => {
   let previousBoard: Board
   let previousCandidates: BoardCandidates
 
@@ -45,6 +45,9 @@ const _solveSudoku = (inputBoard: Board): Board => {
       const pairsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(2)(currentCandidates)
       currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(pairsCandidates)
       currentCandidates = narrowNakedTuplesResultant(currentCandidates)(pairsCandidates)
+
+      const lockedCandidates = findLockedCandidates(currentCandidates)
+      currentCandidates = narrowLockedCandidates(currentCandidates)(lockedCandidates)
   
       const xWingsCandidates = findFishCandidates(2)(currentCandidates)
       currentCandidates = narrowXWingResultant(currentCandidates)(xWingsCandidates)
@@ -63,16 +66,12 @@ const _solveSudoku = (inputBoard: Board): Board => {
       const jellyfishCandidates = findFishCandidates(4)(currentCandidates)
       currentCandidates = narrowXWingResultant(currentCandidates)(jellyfishCandidates)
     } else if (noChangeCpt === 5) {
-      const quadsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(4)(currentCandidates)
-      currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(quadsCandidates)
-      currentCandidates = narrowNakedTuplesResultant(currentCandidates)(quadsCandidates)
-
-      const squirmbagCandidates = findFishCandidates(5)(currentCandidates)
-      currentCandidates = narrowXWingResultant(currentCandidates)(squirmbagCandidates)
-    } else if (noChangeCpt === 6) {
       const qintsCandidates: Record<Dimension, BoardCandidates> = findTuplesCandidates(5)(currentCandidates)
       currentCandidates = narrowHiddenTuplesToNaked(currentCandidates)(qintsCandidates)
       currentCandidates = narrowNakedTuplesResultant(currentCandidates)(qintsCandidates)
+
+      const squirmbagCandidates = findFishCandidates(5)(currentCandidates)
+      currentCandidates = narrowXWingResultant(currentCandidates)(squirmbagCandidates)
     }
 
     currentBoard = fillNakedSinglesCandidates(EMPTY_VAL)(currentBoard, currentCandidates)
@@ -89,9 +88,9 @@ const _solveSudoku = (inputBoard: Board): Board => {
     }
 
     boardOver = isBoardOver(EMPTY_VAL)(currentBoard)
-  } while (noChangeCpt <= 6 && !boardOver)
+  } while (noChangeCpt <= 5 && !boardOver)
 
-  return currentBoard
+  return [currentBoard, currentCandidates]
 }
 
 
@@ -238,6 +237,58 @@ const narrowXWingResultant = (boardCandidates: BoardCandidates) => (xWingCandida
       }, cellCandidates)
     })
   })
+}
+
+const getDisallowedLockedCandidates = (dimension: Dimension, intersectingDimension: Dimension) => (
+  lockedCandidates: Record<'row' | 'col', { pointing: BoardCandidates, claiming: BoardCandidates }>,
+  cellIndex: CellIndex,
+  srcDimension: Dimension = 'row'
+) => {
+  const dimensionLockedCandidates = dimension === 'square'
+    ? lockedCandidates[intersectingDimension as 'row' | 'col'].claiming
+    : lockedCandidates[dimension].pointing
+  
+  const [
+    lookupBoxIndex,
+    lookupIndexInBox
+  ] = transformIndex(cellIndex, srcDimension)(dimension)
+
+  const [
+    intersectingBoxIndex,
+    indexInIntersectingBox
+  ] = transformIndex(cellIndex, srcDimension)(intersectingDimension)
+
+  const lookupBoxLockedCandidates = dimensionLockedCandidates[lookupBoxIndex]
+  return [...new Set(
+    lookupBoxLockedCandidates
+    .filter((lookupCellCandidates, lookupCellIndexInBox) => {
+      const [
+        lookupCellIntersectingBoxIndex
+      ] = transformIndex([lookupBoxIndex, lookupCellIndexInBox], dimension)(intersectingDimension)
+
+      return lookupCellIntersectingBoxIndex !== intersectingBoxIndex
+    })
+    .flat()
+  )]
+}
+
+const narrowLockedCandidates = (boardCandidates: BoardCandidates) => (lockedCandidates: Record<'row' | 'col', { pointing: BoardCandidates, claiming: BoardCandidates }>) => {
+  return boardCandidates.map(
+    (boxCandidates, boxIndex) => boxCandidates.map(
+      (cellCandidates, indexInBox) => {
+        const disallowedCandidates = [...new Set(
+          (['row', 'col'] as const).flatMap(dimension => {
+            return [...new Set([
+              ...getDisallowedLockedCandidates(dimension, 'square')(lockedCandidates, [boxIndex, indexInBox]),
+              ...getDisallowedLockedCandidates('square', dimension)(lockedCandidates, [boxIndex, indexInBox])
+            ])]
+          })
+        )]
+
+        return cellCandidates.filter(cellCandidate => !disallowedCandidates.includes(cellCandidate))
+      }
+    )
+  )
 }
 
 
@@ -413,6 +464,64 @@ const findFishCandidates = (n: 2 | 3 | 4 | 5) => (boardCandidates: BoardCandidat
     return entry
   })) as Record<Dimension, BoardCandidates>
 )
+
+const _findLockedCandidates = (dimension: Dimension, intersectingDimension: Dimension) => (boardCandidates: BoardCandidates): BoardCandidates => {
+  const dimensionBoardCandidates = getBoardCandidates(boardCandidates)(dimension)
+  const intersectingDimensionBoardCandidates = getBoardCandidates(boardCandidates)(intersectingDimension)
+
+  const lockedCandidates = dimensionBoardCandidates.map(
+    (boxCandidates, boxIndex) => {
+      const boxCellIndexesByCandidates = getCellIndexesByCandidates(boxCandidates)
+      const boxCellIndexesByLockedCandidates = boxCellIndexesByCandidates.map(
+        ([lockedCandidate, allowedCellIndexes]) => (
+          // Keep only cell indexes where
+          [lockedCandidate, allowedCellIndexes.filter(
+            allowedCellIndex => {
+              // Find intersecting box
+              const [intersectingBoxIndex] = transformIndex([boxIndex, allowedCellIndex], dimension)(intersectingDimension)
+
+              // Find allowed cell indexes for this candidate in intersecting box
+              const intersectingBoxCandidates = intersectingDimensionBoardCandidates[intersectingBoxIndex]
+              const [,intersectingAllowedCellIndexes] = getCellIndexesByCandidates(intersectingBoxCandidates)
+                .find(([subCandidate]) => subCandidate === lockedCandidate)!
+
+              // every allowed cell index in intersecting box is on initial box
+              return intersectingAllowedCellIndexes.every(
+                intersectingAllowedCellIndex => {
+                  const [intersectingAllowedBoxIndexInDimension] = transformIndex([intersectingBoxIndex, intersectingAllowedCellIndex], intersectingDimension)(dimension)
+                  return intersectingAllowedBoxIndexInDimension === boxIndex
+                }
+              )
+            }
+          )] as [string, number[]]
+        )
+      )
+
+      return boxCandidates.map(
+        (cellCandidates, indexInBox) => boxCellIndexesByLockedCandidates
+          .filter(
+            ([lockedCandidate, allowedCellIndexes]) => allowedCellIndexes.includes(indexInBox)
+          )
+          .map(
+            ([lockedCandidate]) => lockedCandidate
+          )
+      )
+    }
+  )
+
+  return lockedCandidates
+}
+
+const findLockedCandidates = (boardCandidates: BoardCandidates) => {
+  return Object.fromEntries([
+    ...(['row', 'col'] as Dimension[]).map(dimension => (
+      [dimension, {
+        pointing: _findLockedCandidates(dimension, 'square')(boardCandidates),
+        claiming: _findLockedCandidates('square', dimension)(boardCandidates)
+      }]
+    ))
+  ]) as Record<Dimension, { pointing: BoardCandidates, claiming: BoardCandidates }>
+}
 
 // Dimensions utils
 const getCellValue = (
@@ -776,27 +885,36 @@ const getCellIndexesByCandidates = (boxCandidates: BoxCandidates) => {
 }
 
 // Random utils
-const intersection = <T, U extends Array<T> = Array<T>>(a1: U, a2: U, ...rest: Array<U>): ReturnType<U['filter']> => {
+const intersection = <T>(...arrays: Array<Array<T>>): Array<T> => {
+  if (arrays.length === 0) {
+    return []
+  } else if (arrays.length === 1) {
+    return arrays[0]
+  }
+
+  const [a1, a2, ...restArrays] = arrays
+
   const a12 = a1.filter(v1 => a2.includes(v1))
-  if (rest.length === 0) { return a12 as ReturnType<U['filter']> }
-  const [
-    next,
-    ...otherRest
-  ] = rest
-  return intersection<T, U>(a12 as U, next, ...otherRest)
+
+  if (restArrays.length === 0) { return a12 }
+
+  return intersection<T>(a12, ...restArrays)
 }
 
-const union = <T, U extends Array<T> = Array<T>>(a1: U, a2: U, ...rest: Array<U>): ReturnType<U['filter']> => {
+const union = <T>(...arrays: Array<Array<T>>): Array<T> => {
+  if (arrays.length === 0) {
+    return []
+  } else if (arrays.length === 1) {
+    return arrays[0]
+  }
+
+  const [a1, a2, ...restArrays] = arrays
   const a12 = [...new Set([...a1, ...a2])]
 
-  if (rest.length === 0) { return a12 as ReturnType<U['filter']> }
-  const [
-    next,
-    ...otherRest
-  ] = rest
-  return union<T, U>(a12 as U, next, ...otherRest)
-}
+  if (restArrays.length === 0) { return a12 }
 
+  return union<T>(a12, ...restArrays)
+}
 
 // Log utils
 const logBoard = (board: Board) => {
@@ -994,6 +1112,7 @@ export {
   findSingleCandidates,
   findTuplesCandidates,
   findFishCandidates,
+  findLockedCandidates,
   isBoardValid,
   isBoardOver,
   narrowCandidatesByFilled,
@@ -1002,6 +1121,7 @@ export {
   narrowHiddenSinglesCandidates,
   narrowNakedTuplesResultant,
   narrowXWingResultant,
+  narrowLockedCandidates,
   generateInitialBoardCandidates
 }
 

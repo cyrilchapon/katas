@@ -1,6 +1,6 @@
 import { AssertionError } from 'assert'
 import { expect } from 'earljs'
-import { Board } from '../../src/37-sudoku-solver'
+import { Board, BoardCandidates, logFullBoard } from '../../src/37-sudoku-solver'
 import { _solveSudoku, isBoardValid, isBoardOver } from '../../src/37-sudoku-solver'
 import { TestCase, testCases } from './util'
 
@@ -11,21 +11,30 @@ describe('SudokuSolver', () => {
   describe('_solveSudoku()', () => {
     Object
       .entries(testCases)
-      // .filter(([testCaseStyle, testCase]) => (
-      //   ([
-      //     'easy',
-      //     'medium',
-      //     'hard',
-      //     'expert',
-      //     'hardcore',
-      //     'extreme'
-      //   ] as string[]).includes(testCaseStyle))
-      // )
+      .filter(([testCaseStyle, testCase]) => (
+        ([
+          'easy',
+          'medium',
+          'hard',
+          'expert',
+          'hardcore',
+          'extreme',
+          'extreme2'
+        ] as string[]).includes(testCaseStyle))
+      )
       .forEach(([testCaseStyle, testCase]) => {
         describe(`${testCaseStyle} case`, () => {
+          let solved: Board
+          let candidates: BoardCandidates
+          before(() => {
+            const [_solved, _candidates] = _solveSudoku(testCase.input)
+            solved = _solved
+            candidates = _candidates
+          })
+
           it('Should produce a valid board', () => {
             const input = testCase.input
-            const _actual = _solveSudoku(input)
+            const _actual = solved
             const actual = isBoardValid('.')(_actual)
             const expected = true
             expect(actual).toEqual(expected)
@@ -33,7 +42,7 @@ describe('SudokuSolver', () => {
     
           it('Should produce an over board', () => {
             const input = testCase.input
-            const _actual = _solveSudoku(input)
+            const _actual = solved
             const actual = isBoardOver('.')(_actual)
             const expected = true
             expect(actual).toEqual(expected)
@@ -41,10 +50,15 @@ describe('SudokuSolver', () => {
         
           it('Should resolve', () => {
             const input = testCase.input
-            const actual = _solveSudoku(input)
-        
+            const actual = solved
             const expected = testCase.output
-            expect(actual).toEqual(expected)
+
+            try {
+              expect(actual).toEqual(expected)
+            } catch (err) {
+              logFullBoard(actual, candidates)
+              throw err
+            }
           })
         })
       })
